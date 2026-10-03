@@ -50,6 +50,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - run: rustup show active-toolchain || rustup toolchain install
+        working-directory: rust
       - run: Scripts/build-xcframework.sh release
       - name: Generated bindings are up to date
         run: git diff --exit-code Sources/LusterCore/Generated
@@ -114,8 +116,9 @@ jobs:
           # .fvmrc names.
           flutter_rust_bridge_codegen generate
           git diff --exit-code lib/src/rust ../../rust/crates/luster-dart/src/frb_generated.rs
-      - run: flutter analyze
-        working-directory: flutter/luster
       - name: The example builds, engine and all
         working-directory: flutter/luster/example
         run: flutter build macos --debug
+      # After a build: the shader bundle pubspec.yaml lists is the build hook's.
+      - run: flutter analyze
+        working-directory: flutter/luster
