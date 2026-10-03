@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches: [main, pre-release]
+  pull_request:
+
+jobs:
+  rust:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v4
+      # rustup reads rust/rust-toolchain.toml and installs that version and its targets.
+      - run: rustup show active-toolchain || rustup toolchain install
+      - run: cargo test --workspace
+      # The engine's maths goes through libm (luster-core/src/math.rs); this
+      # keeps the platform's own from slipping back in.
+      - run: cargo clippy --workspace --all-targets -- -A clippy::all -D clippy::disallowed_methods
+      # Scripts/release.sh moves them together; nothing else should move one.
+      - name: The version is the same everywhere
+        working-directory: .
+        run: |
+          engine=$(grep -m1 '^version = ' rust/Cargo.toml | cut -d'"' -f2)
+          for found in \
+              "$(grep -m1 '^version: ' flutter/luster/pubspec.yaml | cut -d' ' -f2)" \
+              "$(grep -m1 "^version '" flutter/luster/android/build.gradle | cut -d"'" -f2)" \
+              "$(grep -m1 '^version = ' android/luster/build.gradle.kts | cut -d'"' -f2)" \
+              "$(grep -m1 '^version = ' android/luster-compose/build.gradle.kts | cut -d'"' -f2)"; do
+            [ "$found" = "$engine" ] || { echo "a version is $found, the engine's is $engine" >&2; exit 1; }
+          done
+
+  # A badge has to be the same bytes wherever it is struck. The dumps in
+  # fixtures/golden carry a hash of every GLB, made on a Mac; these strike the
+  # same documents on Linux, on both architectures the engine ships for.
+  same-badges:
+    strategy:
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show active-toolchain || rustup toolchain install
+        working-directory: rust
+      - run: Scripts/parity.sh
+
+  swift:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: Scripts/build-xcframework.sh release
+      - name: Generated bindings are up to date
+        run: git diff --exit-code Sources/LusterCore/Generated
+      - run: swift test
+      - name: Test on the iOS simulator
+        run: |
+          device=$(xcrun simctl list devices available -j \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for k,v in d.items() if "iOS" in k for x in v if x["name"].startswith("iPhone")))')
+          xcodebuild test -scheme Luster-Package -destination "platform=iOS Simulator,id=$device"
+
+  examples:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show active-toolchain || rustup toolchain install
+        working-directory: rust
+      - run: Scripts/build-xcframework.sh release
+      - run: swift test --package-path Apps/LusterMac
+      - run: swift build --package-path Tools/LusterShot
+      - name: The demo builds for the iOS simulator
+        working-directory: Examples/LusterDemo
+        run: |
+          brew install xcodegen
+          xcodegen generate
+          xcodebuild build -project LusterDemo.xcodeproj -scheme LusterDemo-iOS \
+            -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO
+      # What the engine makes of the fixtures must still be what the dumps say.
+      - run: Scripts/parity.sh
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show active-toolchain || rustup toolchain install
+        working-directory: rust
+      - run: cargo install cargo-ndk
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: Scripts/build-android.sh
+      - name: Generated bindings are up to date
+        run: git diff --exit-code android/luster/src/main/kotlin/dev/famio/luster/core
+      - run: ./gradlew :luster:testDebugUnitTest :luster:assembleRelease :luster-compose:assembleRelease :sample:assembleDebug
+        working-directory: android
+
+  flutter:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show active-toolchain || rustup toolchain install
+        working-directory: rust
+      - uses: subosito/flutter-action@v2
+        with:
+          # What flutter/luster/.fvmrc pins.
+          flutter-version: 3.47.5
+      - run: cargo install flutter_rust_bridge_codegen --version 2.13.0 --locked
+      - name: Generated bindings are up to date
+        working-directory: flutter/luster
+        run: |
+          # Without fvm installed it uses the flutter on the path, the one
+          # .fvmrc names.
+          flutter_rust_bridge_codegen generate
+          git diff --exit-code lib/src/rust ../../rust/crates/luster-dart/src/frb_generated.rs
+      - run: flutter analyze
+        working-directory: flutter/luster
+      - name: The example builds, engine and all
+        working-directory: flutter/luster/example
+        run: flutter build macos --debug

@@ -1,0 +1,134 @@
+name: Release
+
+# Nothing here runs on its own. A release is started by hand, and even then it
+# only builds and checks: it publishes when someone asks it to, by setting
+# `publish` to true.
+#
+# Scripts/release.sh prepares the tag beforehand: it sets the version
+# everywhere, packs the XCFramework and writes its URL and checksum into
+# Package.swift. That zip is attached by hand to a draft release. The engine
+# does not build to the same bytes twice (xcodebuild orders the slices as it
+# likes and the archives carry the time they were made), so rather than build
+# it again this checks the zip the draft carries: that it is the one the tag
+# names, and that the package passes its tests linked against it.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "The tag to release (e.g. 0.2.0). It must already exist."
+        required: true
+        type: string
+      publish:
+        description: "Take the draft release public and publish the AAR"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  apple:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+      - run: rustup show active-toolchain || rustup toolchain install
+        working-directory: rust
+
+      - name: A tag may not point at a local engine
+        run: |
+          if grep -q 'path: "rust/target/apple' Package.swift; then
+            echo "Package.swift still points at the local XCFramework;" \
+                 "run Scripts/release.sh before tagging" >&2
+            exit 1
+          fi
+
+      - name: The draft's zip is the one Package.swift was tagged with
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "${{ inputs.version }}" \
+            --pattern LusterFFI.xcframework.zip --dir "$RUNNER_TEMP"
+          attached=$(swift package compute-checksum "$RUNNER_TEMP/LusterFFI.xcframework.zip")
+          tagged=$(grep -o 'checksum: "[0-9a-f]*"' Package.swift | cut -d'"' -f2)
+          echo "attached $attached"
+          echo "tagged   $tagged"
+          [ "$attached" = "$tagged" ] || {
+            echo "the release's zip is not the one Package.swift names" >&2
+            exit 1
+          }
+
+      # The tests run against that zip, unpacked where a checkout's own build
+      # would be. The bindings are the ones committed with the tag.
+      - name: Link the package against the draft's engine
+        run: |
+          mkdir -p rust/target/apple
+          unzip -q "$RUNNER_TEMP/LusterFFI.xcframework.zip" -d rust/target/apple
+          python3 - <<'PY'
+          import re
+          p = 'Package.swift'
+          s = open(p).read()
+          s = re.sub(r'let ffi: Target = \.binaryTarget\((?:[^)]*)\)',
+                     'let ffi: Target = .binaryTarget(\n    name: "LusterFFI",\n'
+                     '    path: "rust/target/apple/LusterFFI.xcframework"\n)', s, count=1)
+          open(p, 'w').write(s)
+          PY
+      - run: swift test
+      - run: Scripts/parity.sh
+
+      - name: Publish the release
+        if: ${{ inputs.publish }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "${{ inputs.version }}" --draft=false
+
+  android:
+    # The AAR is published only once the Apple side has checked out.
+    needs: apple
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+      - run: rustup show active-toolchain || rustup toolchain install
+        working-directory: rust
+      - run: cargo install cargo-ndk
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: Scripts/build-android.sh release
+      - name: Build the AAR
+        working-directory: android
+        run: ./gradlew :luster:assembleRelease :luster-compose:assembleRelease
+      - name: Publish the AAR
+        if: ${{ inputs.publish }}
+        working-directory: android
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ./gradlew :luster:publishReleasePublicationToGitHubPackagesRepository :luster-compose:publishReleasePublicationToGitHubPackagesRepository
+
+  flutter:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+      - run: rustup show active-toolchain || rustup toolchain install
+        working-directory: rust
+      - uses: subosito/flutter-action@v2
+        with:
+          # What flutter/luster/.fvmrc pins.
+          flutter-version: 3.47.5
+      # pub.dev is never published to from here: the last step is a person's,
+      # `dart pub publish` from flutter/luster. This says what it would say.
+      - name: What pub.dev would say
+        working-directory: flutter/luster
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter pub publish --dry-run
