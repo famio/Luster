@@ -1,0 +1,8 @@
+[bindings.swift]
+module_name = "LusterCore"
+ffi_module_name = "LusterFFI"
+ffi_module_filename = "LusterFFI"
+generate_module_map = true
+
+[bindings.kotlin]
+package_name = "dev.famio.luster.core"

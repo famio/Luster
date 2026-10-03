@@ -1,0 +1,10 @@
+[package]
+name = "uniffi-bindgen"
+description = "The uniffi bindings generator, pinned to the workspace's uniffi version."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+uniffi = { workspace = true, features = ["cli"] }

@@ -1,0 +1,16 @@
+[package]
+name = "luster-ffi"
+description = "uniffi surface of luster-core for Swift and Kotlin."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+# staticlib for the XCFramework, cdylib for Android and for generating bindings.
+crate-type = ["lib", "staticlib", "cdylib"]
+name = "luster_ffi"
+
+[dependencies]
+luster-core.workspace = true
+uniffi.workspace = true
+thiserror = "2"
