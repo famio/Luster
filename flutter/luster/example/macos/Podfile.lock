@@ -1,6 +1,6 @@
 PODS:
   - FlutterMacOS (1.0.0)
-  - luster (0.0.1):
+  - luster (0.1.0):
     - FlutterMacOS
 
 DEPENDENCIES:
@@ -15,7 +15,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   FlutterMacOS: c232990155153907050900a2e175c7773903ba4e
-  luster: 08185166123329e8408fe11816d6f49f43fe3e51
+  luster: 0679cfdb2d44a4d5156f478b0b7d49c6d5a0341f
 
 PODFILE CHECKSUM: 1e95c36afbfd1cb6423ceca4de7a8e1b256fb6ac
 
