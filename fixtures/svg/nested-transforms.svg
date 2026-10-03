@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Nested transforms that compose. -->
+  <g transform="translate(40,40)">
+    <g transform="scale(2)"><path d="M0,0 H10 V10 H0 Z"/></g>
+  </g>
+</svg>
+

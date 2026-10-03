@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- An even-odd square with a hole: the hole must survive the trace. -->
+  <path fill-rule="evenodd" fill="#7040A0"
+        d="M10,10 H90 V90 H10 Z M35,35 H65 V65 H35 Z"/>
+</svg>
+

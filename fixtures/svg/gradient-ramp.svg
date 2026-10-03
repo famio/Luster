@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- The same gradient across two shapes: each face follows the ramp. -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="100" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#000000"/>
+      <stop offset="1" stop-color="#FFFFFF"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="40" height="100" fill="url(#g)"/>
+  <rect x="60" y="0" width="40" height="100" fill="url(#g)"/>
+</svg>
+

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- A clipPath: its contents are a region, never paint. -->
+  <defs><clipPath id="c"><rect x="0" y="0" width="100" height="100"/></clipPath></defs>
+  <g clip-path="url(#c)"><path d="M40,40 H60 V60 H40 Z"/></g>
+</svg>
+

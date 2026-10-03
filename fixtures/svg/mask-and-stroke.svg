@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- A stroke masked to the badge, under an even-odd border ring. -->
+  <mask id="m"><circle cx="50" cy="50" r="40" fill="white"/></mask>
+  <circle cx="50" cy="50" r="40" fill="#A4C9CA"/>
+  <g mask="url(#m)">
+    <path fill="none" stroke="#C58A2B" stroke-width="4" d="M-10,50 H110 M50,-10 V110"/>
+  </g>
+  <path fill="#C58A2B" fill-rule="evenodd"
+        d="M50,10 a40,40 0 1,0 0.01,0 Z M50,20 a30,30 0 1,1 -0.01,0 Z"/>
+</svg>
+

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- A sample badge drawn for Luster's tests and demos: a scalloped seal
+       with a ring, a star and a banner. Solid fills only. -->
+  <path fill="#1d3557" d="M100 4 L114 18 L133 12 L141 30 L161 31 L162 51 L181 59 L175 78 L189 92 L180 100 L189 108 L175 122 L181 141 L162 149 L161 169 L141 170 L133 188 L114 182 L100 196 L86 182 L67 188 L59 170 L39 169 L38 149 L19 141 L25 122 L11 108 L20 100 L11 92 L25 78 L19 59 L38 51 L39 31 L59 30 L67 12 L86 18 Z"/>
+  <circle cx="100" cy="100" r="70" fill="#f1faee"/>
+  <circle cx="100" cy="100" r="60" fill="#457b9d"/>
+  <path fill="#e9c46a" d="M100 52 L111.8 85.8 L147.6 86.4 L119.1 108.2 L129.4 142.6 L100 122 L70.6 142.6 L80.9 108.2 L52.4 86.4 L88.2 85.8 Z"/>
+  <path fill="#e63946" fill-rule="evenodd" d="M40 150 Q100 175 160 150 L166 170 Q100 196 34 170 Z M60 160 L62 166 L68 166 L63 170 L65 176 L60 172 L55 176 L57 170 L52 166 L58 166 Z"/>
+</svg>

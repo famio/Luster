@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Solid fills: a CSS rgb() colour with a named colour set on it. -->
+  <rect x="0" y="0" width="100" height="100" style="fill:rgb(113,166,41)"/>
+  <rect x="40" y="40" width="20" height="20" fill="white"/>
+</svg>
+

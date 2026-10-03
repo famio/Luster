@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- A stroke declared in an inline style attribute. -->
+  <path d="M20,50 H80" style="fill:none;fill-rule:nonzero;stroke:white;stroke-width:10px;"/>
+</svg>
+
