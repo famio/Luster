@@ -24,9 +24,9 @@ esac
 
 TARGETS=(aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
          aarch64-apple-darwin x86_64-apple-darwin)
+# From rust/, so rustup uses the toolchain rust/rust-toolchain.toml names.
 for target in "${TARGETS[@]}"; do
-    cargo build --manifest-path "$RUST/Cargo.toml" -p luster-ffi \
-        ${FLAGS[@]+"${FLAGS[@]}"} --target "$target"
+    (cd "$RUST" && cargo build -p luster-ffi ${FLAGS[@]+"${FLAGS[@]}"} --target "$target")
 done
 lib() { echo "$RUST/target/$1/$DIR/$LIB"; }
 

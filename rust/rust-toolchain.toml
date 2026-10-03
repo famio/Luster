@@ -1,5 +1,7 @@
 [toolchain]
 channel = "1.98.1"
+# frb formats what it generates; CI runs clippy.
+components = ["rustfmt", "clippy"]
 targets = [
     "aarch64-apple-ios",
     "aarch64-apple-ios-sim",

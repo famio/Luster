@@ -15,7 +15,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export PATH="/opt/homebrew/opt/rustup/bin:$HOME/.cargo/bin:$PATH"
 
-cargo build --release --quiet --manifest-path "$ROOT/rust/Cargo.toml" -p luster-cli
+(cd "$ROOT/rust" && cargo build --release --quiet -p luster-cli)
 LUSTER="$ROOT/rust/target/release/luster"
 
 "$LUSTER" parity "$ROOT/fixtures/golden" "$ROOT/fixtures/svg"/*.svg
