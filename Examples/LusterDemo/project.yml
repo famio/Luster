@@ -1,0 +1,60 @@
+name: LusterDemo
+options:
+  bundleIdPrefix: dev.famio.luster
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+packages:
+  Luster:
+    path: ../..
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+targets:
+  LusterDemo-iOS:
+    type: application
+    platform: iOS
+    sources:
+      - Sources
+      - path: ../../fixtures/svg
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - package: Luster
+        product: LusterUI
+    info:
+      path: Info.plist
+      properties:
+        UILaunchScreen: {}
+        CFBundleDisplayName: Luster
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.famio.luster.demo
+        TARGETED_DEVICE_FAMILY: "1,2"
+  LusterDemo-iOSUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: LusterDemo-iOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.famio.luster.demo.uitests
+        TEST_TARGET_NAME: LusterDemo-iOS
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  LusterDemo-iOS:
+    build:
+      targets:
+        LusterDemo-iOS: all
+        LusterDemo-iOSUITests: [test]
+    test:
+      targets: [LusterDemo-iOSUITests]
+      environmentVariables:
+        LUSTER_SHOTS: $(LUSTER_SHOTS)
