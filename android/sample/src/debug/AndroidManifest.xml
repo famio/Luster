@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A debug build may fetch from a server on the development machine over
+     plain HTTP: the emulator reaches it as 10.0.2.2. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:networkSecurityConfig="@xml/local_http" />
+</manifest>
