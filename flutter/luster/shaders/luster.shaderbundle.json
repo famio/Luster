@@ -1,0 +1,10 @@
+{
+  "BadgeFragment": {
+    "type": "fragment",
+    "file": "shaders/luster_badge.frag"
+  },
+  "BadgeCubeFragment": {
+    "type": "fragment",
+    "file": "shaders/luster_badge_cube.frag"
+  }
+}

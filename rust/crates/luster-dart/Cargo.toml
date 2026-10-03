@@ -1,0 +1,20 @@
+[package]
+# cargokit (the Flutter build glue) finds the library by package name, so it
+# must match the library name: underscores, not the workspace's dashes.
+name = "luster_dart"
+description = "flutter_rust_bridge surface of luster-core for Dart."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+name = "luster_dart"
+
+[dependencies]
+luster-core.workspace = true
+flutter_rust_bridge = "=2.13.0"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }

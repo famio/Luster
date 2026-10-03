@@ -1,0 +1,45 @@
+name: luster
+description: "Mints SVG artwork into a lit 3D badge, rendered with flutter_scene. The engine is Luster's Rust core."
+version: 0.1.0
+homepage: https://github.com/famio/Luster
+repository: https://github.com/famio/Luster
+issue_tracker: https://github.com/famio/Luster/issues
+topics: [svg, 3d, badge, rendering, rust]
+
+environment:
+  sdk: ^3.13.0
+  # flutter_scene needs Flutter GPU, switchable per platform from 3.47.1.
+  flutter: '>=3.47.1'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_gpu_shaders: ^0.5.1
+  # Exactly the version luster-dart was generated with: the runtime refuses any other.
+  flutter_rust_bridge: 2.13.0
+  flutter_scene: ^0.23.0
+  hooks: ^2.0.0
+  vector_math: ^2.1.4
+
+dev_dependencies:
+  ffi: ^2.1.3
+  ffigen: ^20.1.1
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  integration_test:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        ffiPlugin: true
+      ios:
+        ffiPlugin: true
+      macos:
+        ffiPlugin: true
+
+  assets:
+    # The badge's shader, compiled by hook/build.dart for the Flutter SDK in use.
+    - build/shaderbundles/luster.shaderbundle
