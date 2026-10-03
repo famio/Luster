@@ -1,0 +1,263 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%@ Allow Luster to access this folder in System Settings > Privacy & Security.": {
+      "comment": "An error message; English for now"
+    },
+    "%@ can’t be read. %@": {
+      "comment": "An error message; English for now"
+    },
+    "Badge": {
+      "comment": "The badge view's accessibility label, from LusterUI",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バッジ"
+          }
+        }
+      }
+    },
+    "Choose an SVG to make into a 3D badge": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3D バッジにする SVG を選んでください"
+          }
+        }
+      }
+    },
+    "Clear": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クリア"
+          }
+        }
+      }
+    },
+    "Copper": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カッパー"
+          }
+        }
+      }
+    },
+    "Couldn’t Export": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "書き出せませんでした"
+          }
+        }
+      }
+    },
+    "Couldn’t Make the Badge": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バッジを作れませんでした"
+          }
+        }
+      }
+    },
+    "Couldn’t Open the File": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読み込めませんでした"
+          }
+        }
+      }
+    },
+    "Drop an SVG": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SVG をドロップ"
+          }
+        }
+      }
+    },
+    "Export GLB": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GLB を書き出す"
+          }
+        }
+      }
+    },
+    "Export GLB…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GLB を書き出す…"
+          }
+        }
+      }
+    },
+    "Exporting…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "書き出し中…"
+          }
+        }
+      }
+    },
+    "Gold": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ゴールド"
+          }
+        }
+      }
+    },
+    "Lighting": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライティング"
+          }
+        }
+      }
+    },
+    "Lines": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "線"
+          }
+        }
+      }
+    },
+    "Lines and edge top in metal": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "線と縁のトップを金属に"
+          }
+        }
+      }
+    },
+    "Metal": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "金属"
+          }
+        }
+      }
+    },
+    "Metal %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "金属 %@"
+          }
+        }
+      }
+    },
+    "Open SVG": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SVG を読み込む"
+          }
+        }
+      }
+    },
+    "Open SVG…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SVG を開く…"
+          }
+        }
+      }
+    },
+    "Open an SVG to make a 3D badge.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SVG を読み込むと、3D バッジを作ります。"
+          }
+        }
+      }
+    },
+    "Shine and reflections": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "光沢と映り込み"
+          }
+        }
+      }
+    },
+    "Silver": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シルバー"
+          }
+        }
+      }
+    },
+    "The cause is unknown.": {
+      "comment": "An error message; English for now"
+    },
+    "The file": {
+      "comment": "An error message; English for now"
+    },
+    "There’s no SVG in what was dropped.": {
+      "comment": "An error message; English for now"
+    },
+    "Where to save the GLB": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GLB の保存先"
+          }
+        }
+      }
+    },
+    "unreadable": {
+      "comment": "After a file name that failed",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読み込めません"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
