@@ -333,9 +333,11 @@ mod tests {
     #[test]
     fn a_badge_struck_after_all_answers_the_ask_made_since() {
         let mints = Mints::new(1, 8);
-        let first = mints.request(svg(0), MintOptions::default());
-        // Queued behind the first, given up on, and asked for again: a second
-        // flight for the same badge.
+        // The one slot held for the whole test: a real mint in it could
+        // finish early and start the flight below.
+        mints.0.state.lock().unwrap().running += 1;
+        // Queued, given up on, and asked for again: a second flight for the
+        // same badge.
         drop(mints.request(svg(1), MintOptions::default()));
         let again = mints.request(svg(1), MintOptions::default());
         let key = Key { svg: svg(1).into(), options: MintOptions::default() };
@@ -347,7 +349,11 @@ mod tests {
         mints.finish(key, 0, Ok(badge.clone()));
         assert!(Arc::ptr_eq(&again.wait().unwrap(), &badge));
         assert!(token.is_cancelled());
-        first.wait().unwrap();
+        // With the slot free, neither flight left in the queue starts.
+        let mut state = mints.0.state.lock().unwrap();
+        state.running -= 1;
+        mints.start(&mut state);
+        drop(state);
         assert_eq!(mints.load(), (0, 0));
     }
 
