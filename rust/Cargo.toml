@@ -1,0 +1,27 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/luster-core",
+    "crates/luster-ffi",
+    "crates/luster-cli",
+    "crates/luster-dart",
+    "uniffi-bindgen",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/famio/Luster"
+
+[workspace.dependencies]
+luster-core = { path = "crates/luster-core" }
+uniffi = "0.32.1"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = 3
+strip = "symbols"
+# uniffi turns a panic at the boundary into an error; aborting would kill the host app.
+panic = "unwind"

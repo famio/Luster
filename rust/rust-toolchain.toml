@@ -1,0 +1,11 @@
+[toolchain]
+channel = "1.98.1"
+targets = [
+    "aarch64-apple-ios",
+    "aarch64-apple-ios-sim",
+    "x86_64-apple-ios",
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+    "aarch64-linux-android",
+    "x86_64-linux-android",
+]
