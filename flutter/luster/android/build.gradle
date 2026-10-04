@@ -44,6 +44,6 @@ android {
 
 apply from: "../cargokit/gradle/plugin.gradle"
 cargokit {
-    manifestDir = "../../../rust/crates/luster-dart"
+    manifestDir = "../rust/crates/luster-dart"
     libname = "luster_dart"
 }

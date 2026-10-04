@@ -22,7 +22,7 @@ Mints SVG artwork into a lit 3D badge, rendered with flutter_scene. The engine i
   s.script_phase = {
     :name => 'Build Rust library',
     # The crate to build, and the library it makes.
-    :script => 'sh "$PODS_TARGET_SRCROOT/../cargokit/build_pod.sh" ../../../rust/crates/luster-dart luster_dart',
+    :script => 'sh "$PODS_TARGET_SRCROOT/../cargokit/build_pod.sh" ../rust/crates/luster-dart luster_dart',
     :execution_position => :before_compile,
     :input_files => ['${BUILT_PRODUCTS_DIR}/cargokit_phony'],
     # Let XCode know that the static library referenced in -force_load below is
