@@ -2,6 +2,8 @@
 
 Strikes an SVG into a 3D gold enamel badge, and shows it lit and turning.
 
+![An SVG of a great wave on the left, and the enamel badge Luster strikes from it on the right, turning under studio lighting](https://raw.githubusercontent.com/famio/Luster/main/docs/images/hero-light.webp)
+
 Hand it a document and Luster builds the whole object from its paths — the
 silhouette, the enamel cells, the raised gold line work, the rolled edge, the
 sandblasted reverse — then draws it with flutter_scene or writes it out as GLB.
