@@ -132,12 +132,22 @@ jobs:
           flutter-version: 3.47.5
       # pub.dev is never published to from here: the last step is a person's,
       # `dart pub publish` from flutter/luster. This says what it would say.
+      # A warning makes the dry run exit 65. One stays on purpose: the runtime
+      # refuses any flutter_rust_bridge but the one the bindings were made with,
+      # so pubspec.yaml pins it. Any other warning, or an error, fails here.
       - name: What pub.dev would say
         working-directory: flutter/luster
         run: |
           flutter pub get
           flutter analyze
-          flutter pub publish --dry-run
+          status=0
+          flutter pub publish --dry-run > "$RUNNER_TEMP/pub" 2>&1 || status=$?
+          cat "$RUNNER_TEMP/pub"
+          [ "$status" = 0 ] || {
+            [ "$status" = 65 ] &&
+              grep -q '^Package has 1 warning\.$' "$RUNNER_TEMP/pub" &&
+              grep -q 'dependency on "flutter_rust_bridge" should allow more than one version' "$RUNNER_TEMP/pub"
+          }
 
   # The Flutter plugin's engine, built for every target it runs on and signed,
   # so an app without Rust needs no Rust: cargokit takes the files for the
