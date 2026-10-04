@@ -19,14 +19,13 @@ on:
         required: true
         type: string
       publish:
-        description: "Take the draft release public and publish the AAR"
+        description: "Take the draft release public and publish the AARs to Maven Central"
         required: true
         default: false
         type: boolean
 
 permissions:
   contents: write
-  packages: write
 
 jobs:
   apple:
@@ -101,16 +100,23 @@ jobs:
           distribution: temurin
           java-version: "17"
       - run: Scripts/build-android.sh release
-      - name: Build the AAR
+      # Signed even when nothing is published, so a check run shows that the
+      # key in the secrets works.
+      - name: Build and sign the AARs
         working-directory: android
-        run: ./gradlew :luster:assembleRelease :luster-compose:assembleRelease
-      - name: Publish the AAR
+        env:
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+        run: ./gradlew :luster:publishToMavenLocal :luster-compose:publishToMavenLocal
+      - name: Publish the AARs to Maven Central
         if: ${{ inputs.publish }}
         working-directory: android
         env:
-          GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_TOKEN: ${{ github.token }}
-        run: ./gradlew :luster:publishReleasePublicationToGitHubPackagesRepository :luster-compose:publishReleasePublicationToGitHubPackagesRepository
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+        run: ./gradlew :luster:publishAndReleaseToMavenCentral :luster-compose:publishAndReleaseToMavenCentral
 
   flutter:
     runs-on: macos-latest

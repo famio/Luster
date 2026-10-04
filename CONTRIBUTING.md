@@ -18,8 +18,7 @@ To use the Android libraries in an app before they are published, put them in th
 Maven repository after `Scripts/build-android.sh`:
 
 ```sh
-cd android && ./gradlew :luster:publishReleasePublicationToMavenLocal \
-                        :luster-compose:publishReleasePublicationToMavenLocal
+cd android && ./gradlew :luster:publishToMavenLocal :luster-compose:publishToMavenLocal
 ```
 
 and in the app, add `mavenLocal()` to the repositories and depend on
@@ -140,8 +139,11 @@ bytes twice (the XCFramework's slices come out in any order and its archives car
 time they were made), so the workflow does not rebuild it. It refuses a tag whose
 `Package.swift` still points at the local XCFramework, checks that the draft's zip has
 the checksum the tag carries, runs the tests linked against that zip, and only then
-takes the draft public. The Android libraries go to GitHub Packages as
-`dev.famio:luster` and `dev.famio:luster-compose`, once the Apple side has passed.
+takes the draft public. The Android libraries go to Maven Central as
+`dev.famio:luster` and `dev.famio:luster-compose`, once the Apple side has passed,
+signed with the key in the repository's secrets (`SIGNING_KEY`, `SIGNING_PASSWORD`;
+the Central Portal token is `MAVEN_CENTRAL_USERNAME` and `MAVEN_CENTRAL_PASSWORD`).
+A check run signs them too, without uploading.
 
 A Flutter user should not need a Rust toolchain either; cargokit can fetch prebuilt
 libraries instead. That wants a signing key of this repository's own — `dart run

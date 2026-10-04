@@ -1,7 +1,11 @@
+import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.SourcesJar
+
 plugins {
     // AGP 9 brings Kotlin support of its own; the Kotlin plugin is not applied.
     id("com.android.library")
-    id("maven-publish")
+    id("com.vanniktech.maven.publish")
 }
 
 group = "dev.famio"
@@ -25,40 +29,36 @@ android {
     packaging { jniLibs { useLegacyPackaging = false } }
 }
 
-publishing {
-    publications {
-        register<MavenPublication>("release") {
-            afterEvaluate { from(components["release"]) }
-            artifactId = "luster"
-            pom {
-                name = "Luster"
-                description = "Strikes an SVG into a 3D gold enamel pin, drawn with Filament."
-                url = "https://github.com/famio/Luster"
-                licenses {
-                    license {
-                        name = "MIT"
-                        url = "https://github.com/famio/Luster/blob/main/LICENSE"
-                    }
-                }
+mavenPublishing {
+    // AGP's own javadoc tool cannot read the engine's sealed classes; an IDE
+    // shows the docs from the sources jar, and Central takes an empty javadoc jar.
+    configure(AndroidSingleVariantLibrary(JavadocJar.Empty(), SourcesJar.Sources()))
+    publishToMavenCentral()
+    // Central takes only signed files; a local build has no key and needs none.
+    if (providers.gradleProperty("signingInMemoryKey").isPresent) signAllPublications()
+    pom {
+        name = "Luster"
+        description = "Strikes an SVG into a 3D gold enamel pin, drawn with Filament."
+        inceptionYear = "2026"
+        url = "https://github.com/famio/Luster"
+        licenses {
+            license {
+                name = "MIT License"
+                url = "https://github.com/famio/Luster/blob/main/LICENSE"
+                distribution = "repo"
             }
         }
-    }
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/famio/Luster")
-            credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
+        developers {
+            developer {
+                id = "famio"
+                name = "famio"
+                url = "https://github.com/famio"
             }
         }
-    }
-}
-
-android {
-    publishing {
-        singleVariant("release") {
-            withSourcesJar()
+        scm {
+            url = "https://github.com/famio/Luster"
+            connection = "scm:git:https://github.com/famio/Luster.git"
+            developerConnection = "scm:git:ssh://git@github.com/famio/Luster.git"
         }
     }
 }
