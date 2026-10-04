@@ -4,7 +4,7 @@ version: 0.1.0
 homepage: https://github.com/famio/Luster
 repository: https://github.com/famio/Luster
 issue_tracker: https://github.com/famio/Luster/issues
-topics: [svg, 3d, badge, rendering, rust]
+topics: [svg, graphics, badge, rendering, rust]
 
 environment:
   sdk: ^3.13.0
