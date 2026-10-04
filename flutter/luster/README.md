@@ -29,8 +29,14 @@ The widget draws with Flutter GPU, which the app has to turn on:
 On Android Flutter GPU wants the Vulkan backend. The standard emulator images
 run Impeller on OpenGL ES, where the scene never comes up, so try it on a device.
 
-Until prebuilt engines are published the package builds the engine from source
-when the app is built, which needs a Rust toolchain (`rustup`).
+The engine comes prebuilt for iOS, macOS and Android, and signed: the package
+checks each file against its key before using it, so the app needs no Rust.
+Where `rustup` is installed the engine is built from source instead, unless a
+`cargokit_options.yaml` at the app's root asks for the prebuilt one:
+
+```yaml
+use_precompiled_binaries: true
+```
 
 ## Use
 

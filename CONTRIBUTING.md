@@ -131,7 +131,7 @@ gh release create 0.2.0 rust/target/apple/LusterFFI.xcframework.zip \
   --draft --verify-tag --title "Luster 0.2.0" --generate-notes     # the zip the tag names
 gh workflow run release.yml -f version=0.2.0 -f publish=false   # check
 gh workflow run release.yml -f version=0.2.0 -f publish=true    # publish
-cd flutter/luster && dart pub publish                            # pub.dev, by hand
+cd flutter/luster && dart pub publish     # pub.dev, by hand, once the workflow is done
 ```
 
 The zip has to be the one `release.sh` packed: the engine never builds to the same
@@ -145,9 +145,14 @@ signed with the key in the repository's secrets (`SIGNING_KEY`, `SIGNING_PASSWOR
 the Central Portal token is `MAVEN_CENTRAL_USERNAME` and `MAVEN_CENTRAL_PASSWORD`).
 A check run signs them too, without uploading.
 
-A Flutter user should not need a Rust toolchain either; cargokit can fetch prebuilt
-libraries instead. That wants a signing key of this repository's own — `dart run
-build_tool precompiled-binaries --help` inside `flutter/luster/cargokit` generates one,
-the private half becomes a repository secret and the public half goes in
-`flutter/luster/cargokit_options.yaml`. Until then the package builds the engine from
-source, which needs Rust.
+A Flutter app needs no Rust either. With `publish`, the workflow also builds the
+plugin's engine for every target it runs on, signs it with `CARGOKIT_PRIVATE_KEY` and
+puts it in a `precompiled_<hash>` prerelease. cargokit, in an app's build, works out the
+hash from the package's Rust sources, fetches those files and checks them against the
+public key in `rust/crates/luster-dart/cargokit.yaml`. The hash covers luster-dart,
+luster-core and the workspace's manifest and lock file (the vendored cargokit is changed
+to take in all of them), so a change to the engine alone gets new files. That is why
+`dart pub publish` waits for the workflow. `flutter/luster/rust` links to `rust/`, so
+the package carries the sources, which the hash and a build from source both need.
+`dart run build_tool gen-key` in `flutter/luster/cargokit/build_tool` makes a new key
+pair.

@@ -195,7 +195,9 @@ class PrecompileBinaries {
             name: 'Precompiled binaries ${hash.substring(0, 8)}',
             targetCommitish: null,
             isDraft: false,
-            isPrerelease: false,
+            // Not a release of the package: a prerelease never becomes the
+            // repository's Latest.
+            isPrerelease: true,
             body: 'Precompiled binaries for crate $packageName, '
                 'crate hash $hash.',
           ));

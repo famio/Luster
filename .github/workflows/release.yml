@@ -138,3 +138,80 @@ jobs:
           flutter pub get
           flutter analyze
           flutter pub publish --dry-run
+
+  # The Flutter plugin's engine, built for every target it runs on and signed,
+  # so an app without Rust needs no Rust: cargokit takes the files for the
+  # crate's hash from a precompiled_<hash> prerelease and checks them against
+  # the key in rust/crates/luster-dart/cargokit.yaml. A hash that is already
+  # there is skipped. This runs before `dart pub publish`, which is by hand.
+  flutter-binaries:
+    if: ${{ inputs.publish }}
+    needs: apple
+    strategy:
+      # One at a time: the first creates the prerelease the second adds to.
+      max-parallel: 1
+      matrix:
+        include:
+          - runner: macos-latest
+            targets: aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios aarch64-apple-darwin x86_64-apple-darwin
+          # An Android debug build asks for i686 too, and one missing target
+          # sends cargokit back to building every one from source.
+          - runner: ubuntu-latest
+            targets: armv7-linux-androideabi aarch64-linux-android i686-linux-android x86_64-linux-android
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.5
+      # Flutter's own defaults, the NDK and minimum SDK an app builds with.
+      - name: Install the NDK
+        if: runner.os == 'Linux'
+        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358"
+      - name: Build, sign and upload
+        working-directory: flutter/luster/cargokit/build_tool
+        env:
+          PRIVATE_KEY: ${{ secrets.CARGOKIT_PRIVATE_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          # The podspecs' minimums, for the C that flutter_rust_bridge compiles.
+          MACOSX_DEPLOYMENT_TARGET: "10.15"
+          IPHONEOS_DEPLOYMENT_TARGET: "13.0"
+        run: |
+          dart pub get
+          args=""
+          for t in ${{ matrix.targets }}; do args="$args --target=$t"; done
+          if [ "$RUNNER_OS" = Linux ]; then
+            args="$args --android-sdk-location=$ANDROID_HOME"
+            args="$args --android-ndk-version=28.2.13676358 --android-min-sdk-version=24"
+          fi
+          dart run build_tool precompile-binaries --repository=${{ github.repository }} \
+            --manifest-dir=../../rust/crates/luster-dart $args
+
+  flutter-binaries-check:
+    needs: flutter-binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.5
+      # verify-binaries goes through every target cargokit knows, Windows and
+      # Linux too; the plugin's own are the ones that have to be there.
+      - name: Every target is there, signed with the key
+        working-directory: flutter/luster/cargokit/build_tool
+        run: |
+          dart pub get
+          dart run build_tool verify-binaries --manifest-dir=../../rust/crates/luster-dart \
+            | tee "$RUNNER_TEMP/verify"
+          for t in aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios \
+                   aarch64-apple-darwin x86_64-apple-darwin armv7-linux-androideabi \
+                   aarch64-linux-android i686-linux-android x86_64-linux-android; do
+            grep -Eq "^Checking $t\.\.\. *OK$" "$RUNNER_TEMP/verify" || {
+              echo "no signed build for $t" >&2
+              exit 1
+            }
+          done

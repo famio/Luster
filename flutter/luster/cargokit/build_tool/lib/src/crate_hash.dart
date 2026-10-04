@@ -13,7 +13,8 @@ import 'package:path/path.dart' as path;
 class CrateHash {
   /// Computes a hash uniquely identifying crate content. This takes into account
   /// content all all .rs files inside the src directory, as well as Cargo.toml,
-  /// Cargo.lock, build.rs and cargokit.yaml.
+  /// Cargo.lock, build.rs and cargokit.yaml, and the luster-core crate and the
+  /// workspace manifest and lock file it is built with.
   ///
   /// If [tempStorage] is provided, computed hash is stored in a file in that directory
   /// and reused on subsequent calls if the crate content hasn't changed.
@@ -78,7 +79,14 @@ class CrateHash {
       // that auto-converts line endings.
       final splitter = LineSplitter();
       if (file.existsSync()) {
-        final data = file.readAsStringSync();
+        final String data;
+        try {
+          data = file.readAsStringSync();
+        } on FileSystemException {
+          // Not text, as luster-core's tone table: the bytes as they are.
+          input.add(file.readAsBytesSync());
+          return;
+        }
         final lines = splitter.convert(data);
         for (final line in lines) {
           input.add(utf8.encode(line));
@@ -116,6 +124,18 @@ class CrateHash {
     addFile('Cargo.lock');
     addFile('build.rs');
     addFile('cargokit.yaml');
+
+    // luster_dart is a thin layer over luster-core, a path dependency built
+    // with the workspace's lock file and release profile. Without them in the
+    // hash, a change to the engine alone would keep the binaries built before it.
+    final core = Directory(path.join(manifestDir, '..', 'luster-core', 'src'));
+    files.addAll(core
+        .listSync(recursive: true, followLinks: false)
+        .whereType<File>()
+        .sortedBy((element) => element.path));
+    addFile('../luster-core/Cargo.toml');
+    addFile('../../Cargo.toml');
+    addFile('../../Cargo.lock');
     return files;
   }
 

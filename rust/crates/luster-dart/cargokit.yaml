@@ -1,0 +1,6 @@
+# Released builds of this crate, signed in release.yml, so a Flutter app needs
+# no Rust. cargokit checks each file against the key before using it, and
+# builds from source when there is none for the crate's hash.
+precompiled_binaries:
+  url_prefix: https://github.com/famio/Luster/releases/download/precompiled_
+  public_key: 968a18966e29cccf581a472d25c09cb03e11318a7bdb71e910b13a7c34379e05

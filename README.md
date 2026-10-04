@@ -284,8 +284,8 @@ view.appearance = LusterAppearance(metal = LusterColor.Silver)
 
 The widget draws with Flutter GPU, which the app has to enable, and on Android Flutter
 GPU needs the Vulkan backend: try it on a device, because the standard emulator images
-run OpenGL ES. Until prebuilt engines are published, building the app needs a Rust
-toolchain. See [the package's README](flutter/luster/README.md) for the setup.
+run OpenGL ES. A released version brings the engine prebuilt, so the app needs no Rust.
+See [the package's README](flutter/luster/README.md) for the setup.
 
 ## Examples
 
