@@ -35,18 +35,18 @@ so the same document gives the same badge, to the byte, on every platform.
 
 Two products: `Luster` (mint a badge, take a still) and `LusterUI` (views).
 
-**Android** — Not on Maven Central yet. Until it is, build the library from a checkout
-(see [CONTRIBUTING.md](CONTRIBUTING.md)).
+**Android** — on Maven Central:
 
-**Flutter** — Not on pub.dev yet. Until it is, depend on the repository (building it
-needs a Rust toolchain):
+```kotlin
+implementation("dev.famio:luster:0.1.0")          // the View system
+implementation("dev.famio:luster-compose:0.1.0")  // Compose; brings luster with it
+```
+
+**Flutter** — on [pub.dev](https://pub.dev/packages/luster):
 
 ```yaml
 dependencies:
-  luster:
-    git:
-      url: https://github.com/famio/Luster.git
-      path: flutter/luster
+  luster: ^0.1.0
 ```
 
 ## Quick start
