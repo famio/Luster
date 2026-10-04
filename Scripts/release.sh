@@ -114,14 +114,14 @@ git add -A Package.swift rust/Cargo.toml rust/Cargo.lock flutter/luster/pubspec.
     android/luster/build.gradle.kts android/luster-compose/build.gradle.kts \
     android/sample/build.gradle.kts \
     Sources/LusterCore/Generated android/luster/src/main/kotlin/dev/famio/luster/core
-git commit -m "Release $VERSION"
+git commit -m "chore(release): $VERSION"
 git tag -a "$VERSION" -m "Luster $VERSION"
 
 # The tag names the release's zip; work after it goes on against the engine
 # built here, or a change to the Rust would never reach the Swift that uses it.
 say "pointing Package.swift back at the local engine"
 git show "HEAD~1:Package.swift" > Package.swift
-git commit -q -m "Build against the local engine again after $VERSION" Package.swift
+git commit -q -m "chore: build against the local engine again after $VERSION" Package.swift
 
 cat <<EOF
 
