@@ -1,0 +1,4 @@
+# Written by hook/build.dart. A shader bundle is only good for the engine that
+# built it, so the directory ships empty and fills when an app is built.
+*
+!.gitignore

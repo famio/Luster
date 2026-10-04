@@ -42,4 +42,5 @@ flutter:
 
   assets:
     # The badge's shader, compiled by hook/build.dart for the Flutter SDK in use.
-    - build/shaderbundles/luster.shaderbundle
+    # The directory ships empty, so the package is whole before any build.
+    - shaders/generated/

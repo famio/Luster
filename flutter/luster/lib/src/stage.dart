@@ -359,7 +359,7 @@ class _BadgeShader {
   static Future<_BadgeShader?> load() async {
     try {
       final library = await gpu.loadShaderLibraryAsync(
-          'packages/luster/build/shaderbundles/luster.shaderbundle');
+          'packages/luster/shaders/generated/luster.shaderbundle');
       final flat = library?['BadgeFragment'];
       if (flat == null) return null;
       return _BadgeShader(flat, library!['BadgeCubeFragment']);

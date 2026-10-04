@@ -119,6 +119,5 @@ jobs:
       - name: The example builds, engine and all
         working-directory: flutter/luster/example
         run: flutter build macos --debug
-      # After a build: the shader bundle pubspec.yaml lists is the build hook's.
       - run: flutter analyze
         working-directory: flutter/luster

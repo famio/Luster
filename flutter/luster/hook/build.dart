@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:isolate';
 
 import 'package:flutter_gpu_shaders/build.dart';
@@ -25,5 +26,12 @@ void main(List<String> args) async {
       // dFdx and texelFetch, as flutter_scene's own shaders.
       glesLanguageVersion: 300,
     );
+    // The bundle lands in build/, which a published package leaves out; the
+    // pubspec lists a directory that ships instead, and this fills it.
+    File.fromUri(input.packageRoot
+            .resolve('build/shaderbundles/luster.shaderbundle'))
+        .copySync(input.packageRoot
+            .resolve('shaders/generated/luster.shaderbundle')
+            .toFilePath());
   });
 }
