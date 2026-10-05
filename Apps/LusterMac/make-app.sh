@@ -2,12 +2,19 @@
 # Assembles Luster.app around the SwiftPM binary. The bundle provides the
 # Dock tile, the menu bar name, and the Finder association for SVG files.
 # Usage: Apps/LusterMac/make-app.sh [debug|release]   (default: release)
+#
+# LUSTER_SIGN_IDENTITY picks the signature: ad-hoc by default, which runs
+# where it was built; a Developer ID identity signs for distribution, with the
+# hardened runtime and a timestamp that notarization asks for (notarize.sh).
 set -euo pipefail
 
 CONFIGURATION="${1:-release}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$ROOT/../.." && pwd)"
 APP="$ROOT/.build/Luster.app"
+IDENTITY="${LUSTER_SIGN_IDENTITY:--}"
+# The app carries the version of the packages it is released with.
+VERSION="$(grep -m1 '^version = ' "$REPO/rust/Cargo.toml" | cut -d'"' -f2)"
 
 swift build -c "$CONFIGURATION" --package-path "$ROOT"
 BINARY="$(swift build -c "$CONFIGURATION" --package-path "$ROOT" --show-bin-path)/Luster"
@@ -21,7 +28,7 @@ cp "$REPO/LICENSE" "$REPO/THIRD_PARTY_NOTICES.md" "$APP/Contents/Resources/"
 xcrun xcstringstool compile "$ROOT/Resources/Localizable.xcstrings" \
     --output-directory "$APP/Contents/Resources"
 
-cat > "$APP/Contents/Info.plist" <<'PLIST'
+cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -34,8 +41,8 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 	<key>CFBundleLocalizations</key>         <array><string>en</string><string>ja</string></array>
 	<key>CFBundleInfoDictionaryVersion</key> <string>6.0</string>
 	<key>CFBundlePackageType</key>           <string>APPL</string>
-	<key>CFBundleShortVersionString</key>    <string>1.0</string>
-	<key>CFBundleVersion</key>               <string>1</string>
+	<key>CFBundleShortVersionString</key>    <string>$VERSION</string>
+	<key>CFBundleVersion</key>               <string>$VERSION</string>
 	<key>LSMinimumSystemVersion</key>        <string>15.0</string>
 	<key>NSHighResolutionCapable</key>       <true/>
 	<key>NSPrincipalClass</key>              <string>NSApplication</string>
@@ -53,9 +60,12 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
-# Ad-hoc signature, enough for a locally built app to run. A signing
-# failure aborts the script: an unsigned app may be refused at launch.
-codesign --force --sign - "$APP"
+# A signing failure aborts the script: an unsigned app may be refused at launch.
+if [ "$IDENTITY" = "-" ]; then
+    codesign --force --sign - "$APP"
+else
+    codesign --force --options runtime --timestamp --sign "$IDENTITY" "$APP"
+fi
 
 # A running copy keeps its old code; warn, and print the build timestamp.
 if pgrep -x Luster >/dev/null; then
