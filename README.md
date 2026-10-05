@@ -294,7 +294,7 @@ See [the package's README](flutter/luster/README.md) for the setup.
 | `Examples/LusterDemo` | The iOS demo: open an SVG, pick the lines, the metal and the light, save a GLB. Tabs switch between the SwiftUI and the UIKit view. `xcodegen generate` first |
 | `android/sample` | The Android demo, the same app in Compose and with Views. `cd android && ./gradlew :sample:installDebug` |
 | `flutter/luster/example` | The Flutter demo. `cd flutter/luster/example && fvm flutter run` |
-| `Apps/LusterMac` | A macOS app: drop an SVG, pick the metal, the lighting and the lines, export a GLB. `Apps/LusterMac/make-app.sh` |
+| `Apps/LusterMac` | A macOS app: drop an SVG, pick the metal, the lighting and the lines, export a GLB. A notarized build is on each [release](https://github.com/famio/Luster/releases); `Apps/LusterMac/make-app.sh` builds one |
 
 [How it works](docs/how-it-works.md) describes how a badge is built and lit.
 [CONTRIBUTING.md](CONTRIBUTING.md) covers building from a checkout, testing and

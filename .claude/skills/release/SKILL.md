@@ -1,6 +1,6 @@
 ---
 name: release
-description: Luster の新しい版を、Swift Package（GitHub Releases）・Maven Central・pub.dev に出す。「リリースして」「0.x.y を出したい」「新しいバージョンを公開」などのときに使う。
+description: Luster の新しい版を、Swift Package（GitHub Releases）・Maven Central・pub.dev に出し、公証した macOS 用アプリをリリースに添付する。「リリースして」「0.x.y を出したい」「新しいバージョンを公開」などのときに使う。
 ---
 
 # Luster のリリース
@@ -15,6 +15,7 @@ description: Luster の新しい版を、Swift Package（GitHub Releases）・Ma
 | Maven Central（`dev.famio:luster`・`luster-compose`） | 同上 | できない |
 | Flutter 用のビルド済みエンジン（`precompiled_<hash>` の prerelease） | 同上 | ― |
 | pub.dev（`luster`） | ユーザーが `dart pub publish` を実行したとき | できない（7 日以内なら retract のみ） |
+| macOS 用アプリ（公証済みの zip を GitHub のリリースに添付） | `gh release upload` したとき | 添付は消せる |
 
 ## 守ること
 
@@ -118,7 +119,24 @@ pub.dev は、手元の dry run では出ない指摘で **サーバー側で拒
 
 この場合、pub.dev の X はタグより後のコミットから出ることになる。違いをユーザーに伝える。
 
-## 7. 仕上げ
+## 7. macOS 用アプリ
+
+公開済みのリリースにファイルを足すので、実行の前に一言確認する。
+
+```sh
+Apps/LusterMac/notarize.sh
+gh release upload X Apps/LusterMac/.build/Luster-X-macos.zip
+```
+
+`notarize.sh` は Developer ID で署名してビルドし（hardened runtime とタイムスタンプ付き）、Apple の公証に出して、ステープルまでする。認証情報はキーチェーンの notarytool のプロファイル `luster-notary`（`xcrun notarytool store-credentials luster-notary --apple-id … --team-id 7G2J8YMD3U` で一度だけ保存。パスワードの入力があるのでユーザーが実行する）。アプリの版番号は `rust/Cargo.toml` から入る。
+
+確認:
+- 出力の `"status":"Accepted"`、`The staple and validate action worked!`、`source=Notarized Developer ID`
+- 失敗すると Apple のログを表示して止まる。hardened runtime で拒否されるものがないかを読む
+- 添付のあと、`https://github.com/famio/Luster/releases/download/X/Luster-X-macos.zip` がログインなしで 200
+- 必要なら、zip を展開して `xattr -w com.apple.quarantine "0081;$(printf %x $(date +%s));Safari;" Luster.app` でダウンロードの印を付け、`spctl --assess --type execute --verbose=2 Luster.app` が `accepted`
+
+## 8. 仕上げ
 
 - README の Install 欄の版番号を X にして、コミット・push（Kotlin の `dev.famio:luster:X`・`luster-compose:X`、pub の `^X`、SwiftPM の `from:`）
 - 採点を見る（https://pub.dev/packages/luster/score 、公開から 1 時間以内に出る）。基準は 160/160。「Package is not compatible with the Flutter SDK」という SDK issues は、flutter_gpu の `dart:nativewrappers` が原因で点に影響しないので無視してよい

@@ -132,7 +132,14 @@ gh release create 0.2.0 rust/target/apple/LusterFFI.xcframework.zip \
 gh workflow run release.yml -f version=0.2.0 -f publish=false   # check
 gh workflow run release.yml -f version=0.2.0 -f publish=true    # publish
 cd flutter/luster && dart pub publish     # pub.dev, by hand, once the workflow is done
+Apps/LusterMac/notarize.sh                # the macOS app, signed and notarized
+gh release upload 0.2.0 Apps/LusterMac/.build/Luster-0.2.0-macos.zip
 ```
+
+`notarize.sh` signs the app with the Developer ID in the keychain and has Apple
+notarize it, through a notarytool profile stored once with `xcrun notarytool
+store-credentials luster-notary`. A download that is not notarized will not open on
+macOS 15 until the user overrides it in System Settings.
 
 The zip has to be the one `release.sh` packed: the engine never builds to the same
 bytes twice (the XCFramework's slices come out in any order and its archives carry the

@@ -135,6 +135,9 @@ the repository's root:
 The zip has to be this one: the engine never builds to the same bytes twice,
 and Package.swift names this one's checksum. Run the workflow with
 publish=false first to check everything without releasing anything; with
-publish=true it takes the draft public. pub.dev is always the last step by hand:
+publish=true it takes the draft public. pub.dev and the macOS app come last,
+by hand:
   cd flutter/luster && dart pub publish
+  Apps/LusterMac/notarize.sh
+  gh release upload "$VERSION" "Apps/LusterMac/.build/Luster-$VERSION-macos.zip"
 EOF
