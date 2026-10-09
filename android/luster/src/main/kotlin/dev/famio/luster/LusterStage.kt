@@ -20,6 +20,7 @@ import dev.famio.luster.core.studioLights
 import com.google.android.filament.Camera
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
+import com.google.android.filament.Fence
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.LightManager
 import com.google.android.filament.Renderer
@@ -98,6 +99,31 @@ class LusterStage(private val context: Context) {
         }
 
     var onStateChange: ((LusterState) -> Unit)? = null
+
+    /**
+     * Whether a badge is on screen: from when the GPU has finished the first
+     * frame that draws it. A view with none shows its placeholder.
+     */
+    var showing = false
+        private set(value) {
+            if (value == field) return
+            field = value
+            onShowingChange?.invoke(value)
+        }
+
+    /** Told when [showing] changes. */
+    var onShowingChange: ((Boolean) -> Unit)? = null
+
+    /**
+     * A badge can reach the screen well after it is put in the scene: Filament
+     * skips frames while the GPU is still busy, and the GPU takes its time
+     * over the first frame that draws it — seconds each, on an emulator that
+     * draws in software. Until a frame has been drawn with the badge,
+     * [unseen] is set; then [arriving] is signalled once the GPU has finished
+     * that frame.
+     */
+    private var unseen = false
+    private var arriving: Fence? = null
 
     var momentumEnabled = true
 
@@ -195,6 +221,17 @@ class LusterStage(private val context: Context) {
         if (draw && renderer.beginFrame(chain, frameTimeNanos)) {
             renderer.render(view)
             renderer.endFrame()
+            if (unseen) {
+                unseen = false
+                arriving = engine.createFence()
+            }
+        }
+        arriving?.let {
+            if (it.wait(Fence.Mode.DONT_FLUSH, 0) == Fence.FenceStatus.CONDITION_SATISFIED) {
+                engine.destroyFence(it)
+                arriving = null
+                showing = true
+            }
         }
     }
 
@@ -269,7 +306,13 @@ class LusterStage(private val context: Context) {
             it.destroy()
         }
         model = null
-        if (parts == null || grit == null) return
+        unseen = false
+        arriving?.let { engine.destroyFence(it) }
+        arriving = null
+        if (parts == null || grit == null) {
+            showing = false
+            return
+        }
 
         val built = BadgeModel(engine, materials, parts, grit, appearance)
         scene.addEntities(built.entities)
@@ -277,6 +320,10 @@ class LusterStage(private val context: Context) {
         badgeSize = parts.size
         frame()
         turn()
+        // Only the first badge waits for its frame: a later one takes the
+        // place of one on screen, with no placeholder to take away.
+        if (showing) return
+        unseen = true
     }
 
     private suspend fun grit(): Texture {
@@ -480,6 +527,7 @@ class LusterStage(private val context: Context) {
         scope.cancel()
         detach()
         model?.destroy()
+        arriving?.let { engine.destroyFence(it) }
         grit?.let { engine.destroyTexture(it) }
         lights.forEach {
             engine.lightManager.destroy(it)

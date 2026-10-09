@@ -8,6 +8,16 @@ import SwiftUI
 /// Minting runs off the main actor; while it runs the previous badge stays on
 /// screen. Changing `source` cancels a mint in flight. Changing `appearance`
 /// only re-lights and re-plates.
+///
+/// Until a badge is on screen the view shows its placeholder, if it is given
+/// one:
+///
+/// ```swift
+/// LusterView(source: .url(url)) { state in
+///     if case .failed = state { Image(systemName: "exclamationmark.triangle") }
+///     else { ProgressView() }
+/// }
+/// ```
 public struct LusterView: View {
     public var source: LusterSource?
     public var options: LusterOptions
@@ -16,6 +26,12 @@ public struct LusterView: View {
     /// system asks for reduced motion, whatever this says.
     public var momentumEnabled: Bool
     public var onStateChange: (@MainActor (LusterState) -> Void)?
+    /// Erased, so that the view's type is the same with a placeholder or
+    /// without, whatever the placeholder is.
+    let placeholder: ((LusterState) -> AnyView)?
+    /// Told whether a placeholder is due, for `LusterNSView`, which shows its
+    /// own over the view.
+    var onPlaceholderChange: (@MainActor (Bool) -> Void)?
 
     @State private var stage = LusterStage()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -29,7 +45,30 @@ public struct LusterView: View {
         self.appearance = appearance
         self.momentumEnabled = momentumEnabled
         self.onStateChange = onStateChange
+        placeholder = nil
     }
+
+    /// `placeholder` is shown over the view, in the middle, while a source is
+    /// set and no badge is on screen: while the first is struck, given
+    /// `.minting`, and if it fails, given `.failed`. A badge struck later
+    /// takes the place of the one on screen without it.
+    public init<Placeholder: View>(
+        source: LusterSource?, options: LusterOptions = .init(),
+        appearance: LusterAppearance = .init(),
+        momentumEnabled: Bool = true,
+        onStateChange: (@MainActor (LusterState) -> Void)? = nil,
+        @ViewBuilder placeholder: @escaping (LusterState) -> Placeholder
+    ) {
+        self.source = source
+        self.options = options
+        self.appearance = appearance
+        self.momentumEnabled = momentumEnabled
+        self.onStateChange = onStateChange
+        self.placeholder = { AnyView(placeholder($0)) }
+    }
+
+    /// Whether a source is set and no badge is on screen.
+    private var placeholderDue: Bool { source != nil && !stage.showing }
 
     public var body: some View {
         RealityView { content in
@@ -65,8 +104,26 @@ public struct LusterView: View {
         .onChange(of: stage.change) {
             onStateChange?(stage.state)
         }
+        .onChange(of: placeholderDue, initial: true) { _, due in
+            onPlaceholderChange?(due)
+        }
         .accessibilityElement()
         .accessibilityLabel(Text("Badge"))
+        // Outside the badge's element, so that what it says is heard.
+        .overlay {
+            if let placeholder {
+                ZStack {
+                    if placeholderDue {
+                        placeholder(stage.placeholderState(for: source, options: options))
+                            // There from the first frame, and fading as the
+                            // badge arrives: the fade covers the frame or two
+                            // a badge can take to be drawn.
+                            .transition(.asymmetric(insertion: .identity, removal: .opacity))
+                    }
+                }
+                .animation(.easeOut(duration: 0.2), value: placeholderDue)
+            }
+        }
     }
 }
 

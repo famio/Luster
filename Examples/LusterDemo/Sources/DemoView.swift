@@ -40,8 +40,11 @@ struct DemoView: View {
             Group {
                 switch renderer {
                 case .swiftUI:
+                    // The status line says why a badge failed.
                     LusterView(source: settings.source, options: settings.options,
-                               appearance: settings.appearance, onStateChange: report)
+                               appearance: settings.appearance, onStateChange: report) { state in
+                        if case .minting = state { ProgressView().controlSize(.large) }
+                    }
                 case .uiKit:
                     LusterUIViewPanel(settings: settings, onState: report)
                 }
@@ -211,7 +214,10 @@ struct LusterUIViewPanel: UIViewRepresentable {
     func makeUIView(context: Context) -> LusterUIView {
         let view = LusterUIView(source: settings.source, appearance: settings.appearance)
         view.options = settings.options
-        view.onStateChange = onState
+        let spinner = UIActivityIndicatorView(style: .large)
+        spinner.startAnimating()
+        view.placeholderView = spinner
+        view.onStateChange = report(to: view)
         return view
     }
 
@@ -220,6 +226,21 @@ struct LusterUIViewPanel: UIViewRepresentable {
         view.source = settings.source
         view.options = settings.options
         view.badgeAppearance = settings.appearance
-        view.onStateChange = onState
+        view.onStateChange = report(to: view)
+    }
+
+    /// Stops the spinner on a failure, as the SwiftUI tab shows nothing then.
+    /// The view itself takes it away as the badge arrives.
+    private func report(to view: LusterUIView) -> @MainActor (LusterState) -> Void {
+        { [onState, weak view] state in
+            if let spinner = view?.placeholderView as? UIActivityIndicatorView {
+                switch state {
+                case .minting: spinner.startAnimating()
+                case .failed: spinner.stopAnimating()
+                case .idle, .ready: break
+                }
+            }
+            onState(state)
+        }
     }
 }

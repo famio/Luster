@@ -223,6 +223,10 @@ class _DemoPageState extends State<DemoPage> {
                 lighting: lighting,
               ),
               onStateChange: _onState,
+              // The status line says why a badge failed.
+              placeholder: (context, state) => state is LusterMinting
+                  ? const CircularProgressIndicator()
+                  : const SizedBox.shrink(),
             ),
           ),
           SafeArea(

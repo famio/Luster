@@ -85,6 +85,18 @@ badge stays on screen while a new one is struck.
 The view draws nothing behind the badge, so the background is yours: a colour, a
 gradient, a photo, or nothing.
 
+Until there is a badge to show, the view can show something of yours in its place: a
+spinner while the first badge is struck, a word if it fails. It sits in the middle and
+fades as the badge arrives. A badge struck later takes the place of the one on screen
+without it.
+
+```swift
+LusterView(source: .url(url)) { state in
+    if case .failed = state { Image(systemName: "exclamationmark.triangle") }
+    else { ProgressView() }
+}
+```
+
 ## Settings
 
 Every platform has the same settings under the same names.
@@ -104,6 +116,7 @@ LusterView(source: .url(url),
 | The metal | `.gold`, `.silver`, `.copper`, any `LusterColor` | `LusterColor.Gold`, `Silver`, `Copper`, … | `LusterColor.gold`, `silver`, `copper`, … |
 | The lighting | `.showcase`, `.off` | `SHOWCASE`, `OFF` | `showcase`, `off` |
 | What it is doing | `LusterState` `.idle / .minting / .ready / .failed` | `LusterState.Idle / Minting / Ready / Failed` | `LusterIdle / LusterMinting / LusterReady / LusterFailed` |
+| Until the badge is up | `placeholder: { state in … }`; `placeholderView` on UIKit and AppKit | `placeholder = { state -> … }`; `placeholderView` on the View | `placeholder: (context, state) => …` |
 
 - **`metalLines`** — By default the lines the document strokes stand as metal walls
   plated in their own stroke colours. `metalLines` leaves them in bare metal instead:
@@ -264,7 +277,16 @@ controller's own view.
 let view = LusterUIView(source: .url(url))
 view.options = LusterOptions(metalLines: true)
 view.badgeAppearance = LusterAppearance(metal: .silver)
+
+let spinner = UIActivityIndicatorView(style: .large)
+spinner.startAnimating()
+view.placeholderView = spinner
 ```
+
+Their placeholder is a view, `placeholderView`, laid in the middle at its own size, or
+over the whole view if it has none. The badge view shows it and takes it away, so a
+spinner can be left turning: one stopped as the badge arrives hides itself before it
+can fade.
 
 ### Android
 
@@ -278,7 +300,12 @@ val view = LusterView(context)
 view.source = LusterSource.url("https://example.com/badge.svg")
 view.options = LusterOptions(metalLines = true)
 view.appearance = LusterAppearance(metal = LusterColor.Silver)
+view.placeholderView = spinner  // over the view, in your layout
 ```
+
+The View's placeholder is laid out by you, over the view, as a list's empty view is; the
+view only shows it and takes it away. The composable lays its `placeholder` in the
+middle, as the Apple views do.
 
 ### Flutter
 

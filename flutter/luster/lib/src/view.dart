@@ -16,6 +16,18 @@ import 'stage.dart';
 /// The engine runs on its own threads, so minting never blocks the UI
 /// isolate. A different [source] gives up a mint in flight; an equal one does
 /// nothing.
+///
+/// Until a badge is on screen the widget shows its [placeholder], if it is
+/// given one:
+///
+/// ```dart
+/// LusterView(
+///   source: source,
+///   placeholder: (context, state) => state is LusterFailed
+///       ? const Icon(Icons.error_outline)
+///       : const CircularProgressIndicator(),
+/// )
+/// ```
 class LusterView extends StatefulWidget {
   const LusterView({
     super.key,
@@ -24,6 +36,7 @@ class LusterView extends StatefulWidget {
     this.appearance = const LusterAppearance(),
     this.momentumEnabled = true,
     this.onStateChange,
+    this.placeholder,
   });
 
   final LusterSource? source;
@@ -36,6 +49,12 @@ class LusterView extends StatefulWidget {
 
   /// Told of every change: minting, ready with a badge, or failed.
   final ValueChanged<LusterState>? onStateChange;
+
+  /// Shown over the view, in the middle, while a source is set and no badge
+  /// is on screen: while the first is struck, given [LusterMinting], and if
+  /// it fails, given [LusterFailed]. A badge struck later takes the place of
+  /// the one on screen without it.
+  final Widget Function(BuildContext context, LusterState state)? placeholder;
 
   @override
   State<LusterView> createState() => _LusterViewState();
@@ -50,6 +69,22 @@ class _LusterViewState extends State<LusterView>
   bool started = false;
   Minting? minting;
   int generation = 0;
+
+  /// The last failure, with the source and options it was for: the
+  /// placeholder is told of it only while they are the widget's.
+  (LusterFailed, LusterSource?, LusterOptions)? failure;
+
+  /// Why the engine would not start, if it would not: nothing is minted
+  /// after, and the placeholder is told of it whatever the source.
+  LusterFailed? broken;
+
+  /// Whether the badge on screen has been drawn, so that the placeholder
+  /// can go. See [_settle].
+  bool settled = false;
+
+  /// Moves on whenever the stage is emptied, giving up a wait for a badge
+  /// shown before to be drawn.
+  int emptied = 0;
 
   static final rust.Handling handling = BadgeStage.handling;
 
@@ -70,7 +105,10 @@ class _LusterViewState extends State<LusterView>
       started = true;
       await stage.setUp(widget.appearance);
     } catch (e) {
-      if (mounted) widget.onStateChange?.call(LusterFailed(e));
+      if (!mounted) return;
+      final failed = LusterFailed(e);
+      setState(() => broken = failed);
+      widget.onStateChange?.call(failed);
       return;
     }
     if (!mounted) return;
@@ -92,6 +130,8 @@ class _LusterViewState extends State<LusterView>
       stage.light(widget.appearance).then((lit) {
         if (lit && mounted) setState(() {});
       }, onError: (Object e) {
+        // The lighting's failure, not the badge's: the placeholder is not
+        // told.
         if (mounted) widget.onStateChange?.call(LusterFailed(e));
       });
     }
@@ -116,30 +156,111 @@ class _LusterViewState extends State<LusterView>
 
   Future<void> _load(LusterSource? source) async {
     // Before the engine is up there is nothing to ask; `_setUp` loads the
-    // document the widget has by then.
-    if (!mounted || !started) return;
+    // document the widget has by then. One that would not start is never
+    // asked.
+    if (!mounted || !started || broken != null) return;
     _giveUp();
     final mine = ++generation;
     if (source == null) {
       stage.show(null, widget.appearance);
+      settled = false;
+      emptied++;
       setState(() {});
-      widget.onStateChange?.call(const LusterIdle());
+      _report(const LusterIdle(), source);
       return;
     }
-    widget.onStateChange?.call(const LusterMinting());
+    _report(const LusterMinting(), source);
     final minting = this.minting = Minting(source, widget.options);
     try {
       final badge = await minting.badge();
       if (!mounted || mine != generation) return;
       stage.show(badge.engine, widget.appearance);
       setState(() {});
-      widget.onStateChange?.call(LusterReady(badge));
+      _report(LusterReady(badge), source);
+      if (!settled) unawaited(_settle(emptied));
       // Once it is on screen, get ready to turn it.
       WidgetsBinding.instance.addPostFrameCallback((_) => _prepareToTurn(mine));
     } catch (e) {
       // A newer document took over; it reports its own state.
-      if (mounted && mine == generation) widget.onStateChange?.call(LusterFailed(e));
+      if (mounted && mine == generation) _report(LusterFailed(e), source);
     }
+  }
+
+  /// Tells the parent of [state], and keeps a failure for the placeholder,
+  /// with the [source] that failed.
+  void _report(LusterState state, LusterSource? source) {
+    final failure = state is LusterFailed ? (state, source, widget.options) : null;
+    if (failure != null || this.failure != null) setState(() => this.failure = failure);
+    widget.onStateChange?.call(state);
+  }
+
+  /// Lets the placeholder go once the first badge has been drawn. The
+  /// frame that first draws it can take a third of a second to rasterize,
+  /// and a fade timed from that frame would be over by the next. The frames
+  /// after it wait for the raster thread to catch up, so the fade starts
+  /// three frames on. A newer source does not stop it: the badge stays on
+  /// screen while the next is struck.
+  Future<void> _settle(int mine) async {
+    for (var frame = 0; frame < 3; frame++) {
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted || mine != emptied) return;
+    }
+    setState(() => settled = true);
+  }
+
+  /// What the placeholder is told: the failure of the widget's source and
+  /// options, and minting until then, before their mint has begun too.
+  LusterState get _placeholderState => switch ((broken, failure)) {
+        (final broken?, _) => broken,
+        (_, (final failed, final source, final options))
+            when source == widget.source && options == widget.options =>
+          failed,
+        _ => const LusterMinting(),
+      };
+
+  /// [view] under the placeholder, if the widget has one. The same with or
+  /// without, so that giving the widget one keeps the view.
+  Widget _withPlaceholder(BuildContext context, Widget view) {
+    final placeholder = widget.placeholder;
+    final shown = widget.source != null && !(stage.showing && settled);
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        view,
+        if (placeholder != null)
+          Positioned.fill(
+            child: AnimatedSwitcher(
+              // There from the first frame, and fading once the badge has been
+              // drawn.
+              duration: Duration.zero,
+              reverseDuration: const Duration(milliseconds: 200),
+              switchOutCurve: Curves.easeOut,
+              // A placeholder on its way out leaves a touch to the badge. Every
+              // child is wrapped alike, under its own key, so that each keeps
+              // its state as the others come and go.
+              layoutBuilder: (current, previous) => Stack(
+                alignment: Alignment.center,
+                children: [
+                  for (final child in [...previous, ?current])
+                    IgnorePointer(
+                      key: child.key,
+                      ignoring: !identical(child, current),
+                      child: child,
+                    ),
+                ],
+              ),
+              child: shown
+                  // Its own layer, so that a spinner turning over the view
+                  // repaints only itself.
+                  ? RepaintBoundary(
+                      key: const ValueKey('placeholder'),
+                      child: Center(child: placeholder(context, _placeholderState)),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ),
+      ],
+    );
   }
 
   // MARK: Turning it
@@ -317,8 +438,8 @@ class _LusterViewState extends State<LusterView>
     // cheaper of the two.
     scene.antiAliasingMode =
         moving && _turningScale < 1 ? AntiAliasingMode.fxaa : AntiAliasingMode.auto;
-    if (!ready) return const SizedBox.expand();
-    return GestureDetector(
+    if (!ready) return _withPlaceholder(context, const SizedBox.expand());
+    final view = GestureDetector(
       onPanStart: (_) {
         setState(() {
           dragging = true;
@@ -357,5 +478,6 @@ class _LusterViewState extends State<LusterView>
         },
       ),
     );
+    return _withPlaceholder(context, view);
   }
 }

@@ -14,7 +14,13 @@ import UIKit.UIGestureRecognizerSubclass
 /// minting, pose, drag and momentum.
 public final class LusterUIView: UIView {
     public var source: LusterSource? {
-        didSet { if source != oldValue { reload() } }
+        didSet {
+            // The same source again does nothing, and leaves a placeholder
+            // fading out to finish.
+            guard source != oldValue else { return }
+            reload()
+            updatePlaceholder(animated: false)
+        }
     }
     public var options = LusterOptions() {
         didSet { if options != oldValue { reload() } }
@@ -29,7 +35,39 @@ public final class LusterUIView: UIView {
         didSet { reduceMotionChanged() }
     }
     public var onStateChange: (@MainActor (LusterState) -> Void)?
+    /// Shown over the view while a source is set and no badge is on screen:
+    /// while the first is struck, and if it fails. It sits in the middle at
+    /// the size it asks for, or covers the view if it asks for none, and fades
+    /// as the badge arrives. A badge struck later takes the place of the one
+    /// on screen without it. The view shows it and takes it away, so a spinner
+    /// can be left turning.
+    public var placeholderView: UIView? {
+        didSet {
+            guard placeholderView !== oldValue else { return }
+            if let oldValue, oldValue.superview === placeholderBox {
+                oldValue.removeFromSuperview()
+                oldValue.translatesAutoresizingMaskIntoConstraints = placedTranslating
+            }
+            if let placeholderView { place(placeholderView) }
+            updatePlaceholder(animated: false)
+        }
+    }
 
+    /// Never while the placeholder is up: there is no badge to name, and
+    /// VoiceOver reaches the placeholder only if the view is not an element
+    /// itself.
+    public override var isAccessibilityElement: Bool {
+        get { super.isAccessibilityElement && !placeholderUp }
+        set { super.isAccessibilityElement = newValue }
+    }
+
+    /// Holds the placeholder and is what comes and goes, so that the
+    /// placeholder's own visibility stays its own: a spinner hides itself
+    /// when it stops.
+    private let placeholderBox = UIView()
+    /// What the placeholder's `translatesAutoresizingMaskIntoConstraints` was
+    /// before the view laid it out, to be given back with it.
+    private var placedTranslating = true
     private let stage = LusterStage()
     private let arView = ARView(frame: .zero, cameraMode: .nonAR,
                                 automaticallyConfigureSession: false)
@@ -55,6 +93,10 @@ public final class LusterUIView: UIView {
         arView.frame = bounds
         arView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         addSubview(arView)
+        placeholderBox.frame = bounds
+        placeholderBox.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        placeholderBox.isHidden = true
+        addSubview(placeholderBox)
 
         let anchor = AnchorEntity(world: .zero)
         anchor.addChild(stage.root)
@@ -110,9 +152,67 @@ public final class LusterUIView: UIView {
             Task { @MainActor in
                 guard let self else { return }
                 self.onStateChange?(self.stage.state)
+                // A badge comes and goes only with a new state.
+                self.updatePlaceholder(animated: true)
                 self.watchState()
             }
         }
+    }
+
+    // MARK: The placeholder
+
+    /// In the middle, no larger than the view; as large as it can be if it
+    /// has no size of its own.
+    private func place(_ placeholder: UIView) {
+        let box = placeholderBox
+        placedTranslating = placeholder.translatesAutoresizingMaskIntoConstraints
+        placeholder.translatesAutoresizingMaskIntoConstraints = false
+        box.addSubview(placeholder)
+        let fill = [placeholder.widthAnchor.constraint(equalTo: box.widthAnchor),
+                    placeholder.heightAnchor.constraint(equalTo: box.heightAnchor)]
+        // Under the hugging of a view with a size of its own.
+        for each in fill { each.priority = .fittingSizeLevel }
+        NSLayoutConstraint.activate(fill + [
+            placeholder.centerXAnchor.constraint(equalTo: box.centerXAnchor),
+            placeholder.centerYAnchor.constraint(equalTo: box.centerYAnchor),
+            placeholder.widthAnchor.constraint(lessThanOrEqualTo: box.widthAnchor),
+            placeholder.heightAnchor.constraint(lessThanOrEqualTo: box.heightAnchor),
+        ])
+    }
+
+    private var placeholderUp: Bool { placeholderView != nil && source != nil && !stage.showing }
+
+    private func updatePlaceholder(animated: Bool) {
+        let box = placeholderBox
+        if placeholderUp {
+            box.layer.removeAllAnimations()
+            box.alpha = 1
+            box.isHidden = false
+        } else if !box.isHidden {
+            guard animated else {
+                box.isHidden = true
+                return
+            }
+            UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseOut) {
+                box.alpha = 0
+            } completion: { [weak self] _ in
+                // Unless it was wanted back meanwhile.
+                guard let self, !self.placeholderUp else { return }
+                box.isHidden = true
+                box.alpha = 1
+            }
+        }
+    }
+
+    // MARK: Turning it
+
+    /// While the placeholder is up there is no badge to turn, and a touch is
+    /// left to the placeholder, so that a button in it can be pressed.
+    public override func gestureRecognizerShouldBegin(_ gesture: UIGestureRecognizer) -> Bool {
+        guard gesture is DragGestureRecognizer else {
+            return super.gestureRecognizerShouldBegin(gesture)
+        }
+        return !placeholderUp
     }
 
     @objc private func drag(_ gesture: DragGestureRecognizer) {

@@ -6,6 +6,8 @@ import android.view.Choreographer
 import android.view.MotionEvent
 import android.view.TextureView
 import android.view.VelocityTracker
+import android.view.View
+import android.view.animation.DecelerateInterpolator
 import com.google.android.filament.android.UiHelper
 import kotlin.math.pow
 
@@ -44,7 +46,13 @@ class LusterView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     /** The document to strike. A different one mints a new badge. */
     var source: LusterSource?
         get() = stage.source
-        set(value) { stage.source = value }
+        set(value) {
+            // The same source again does nothing, and leaves a placeholder
+            // fading out to finish.
+            if (value == stage.source) return
+            stage.source = value
+            updatePlaceholder(fade = false)
+        }
 
     var options: LusterOptions
         get() = stage.options
@@ -67,6 +75,22 @@ class LusterView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         get() = stage.momentumEnabled
         set(value) { stage.momentumEnabled = value }
 
+    /**
+     * Shown while a source is set and no badge is on screen: while the first
+     * is struck, and if it fails. Like a list's empty view, it is yours to lay
+     * out, over this view; the view shows it, and fades it out as the badge
+     * arrives. A badge struck later takes the place of the one on screen
+     * without it.
+     */
+    var placeholderView: View? = null
+        set(value) {
+            if (value === field) return
+            // The view shows only its own.
+            field?.putAway()
+            field = value
+            updatePlaceholder(fade = false)
+        }
+
     private val uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK)
     private val choreographer = Choreographer.getInstance()
     private var lastTouch = 0f to 0f
@@ -85,6 +109,31 @@ class LusterView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         }
         uiHelper.attachTo(this)
         isClickable = true
+        stage.onShowingChange = { updatePlaceholder(fade = true) }
+    }
+
+    private fun updatePlaceholder(fade: Boolean) {
+        val placeholder = placeholderView ?: return
+        if (source != null && !stage.showing) {
+            placeholder.animate().cancel()
+            placeholder.alpha = 1f
+            placeholder.visibility = View.VISIBLE
+        } else if (placeholder.visibility == View.VISIBLE) {
+            if (!fade) {
+                placeholder.putAway()
+                return
+            }
+            placeholder.animate().alpha(0f).setDuration(200)
+                .setInterpolator(DecelerateInterpolator())
+                .withEndAction { placeholder.putAway() }
+        }
+    }
+
+    /** Hidden, and whole for the next time it is shown. */
+    private fun View.putAway() {
+        animate().cancel()
+        visibility = View.GONE
+        alpha = 1f
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {

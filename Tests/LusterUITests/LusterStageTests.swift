@@ -51,11 +51,7 @@ import Testing
 /// not the one the strike started with.
 @MainActor
 @Test func anAppearanceChosenWhileMintingIsTheOneTheBadgeArrivesIn() async throws {
-    let here = URL(fileURLWithPath: #filePath)
-    var data = try Data(contentsOf: here.deletingLastPathComponent()
-        .deletingLastPathComponent().deletingLastPathComponent()
-        .appendingPathComponent("fixtures/svg/sample-badge.svg"))
-    data.append(contentsOf: Array("<!-- \(#function) -->".utf8))
+    let data = try sampleBadge()
     let stage = LusterStage()
     let shown = LusterAppearance(lighting: .showcase)
     let shape = LusterAppearance(lighting: .off)
@@ -75,15 +71,54 @@ import Testing
 /// only looks once both have happened.
 @MainActor
 @Test func aNewBadgeFromTheSameDocumentIsAChange() async throws {
-    let here = URL(fileURLWithPath: #filePath)
-    var data = try Data(contentsOf: here.deletingLastPathComponent()
-        .deletingLastPathComponent().deletingLastPathComponent()
-        .appendingPathComponent("fixtures/svg/sample-badge.svg"))
-    data.append(contentsOf: Array("<!-- \(#function) -->".utf8))
+    let data = try sampleBadge()
     let stage = LusterStage()
     await stage.load(.data(data), options: .init(metalLines: false), appearance: .init())
     let first = (change: stage.change, key: stage.state.badge?.designKey)
     await stage.load(.data(data), options: .init(metalLines: true), appearance: .init())
     #expect(stage.change != first.change)
     #expect(stage.state.badge?.designKey != first.key)
+}
+
+/// The placeholder is up while a source has no badge on screen, and is told
+/// of a failure only for the source that failed: a new source after a
+/// failure is still being struck, though its load has not begun.
+@MainActor
+@Test func thePlaceholderIsToldOfTheFailureOfItsOwnSource() async throws {
+    let broken = LusterSource.svg("<svg xmlns='http://www.w3.org/2000/svg'/>")
+    let stage = LusterStage()
+    #expect(!stage.showing)
+    await stage.load(broken, options: .init(), appearance: .init())
+    #expect(!stage.showing)
+    guard case .failed = stage.placeholderState(for: broken, options: .init()) else {
+        Issue.record("the failure was not passed on")
+        return
+    }
+
+    let data = try sampleBadge()
+    let next = LusterSource.data(data)
+    guard case .minting = stage.placeholderState(for: next, options: .init()) else {
+        Issue.record("a new source was told of the last one's failure")
+        return
+    }
+    guard case .minting = stage.placeholderState(for: broken, options: .init(metalLines: true))
+    else {
+        Issue.record("new options were told of the last ones' failure")
+        return
+    }
+    await stage.load(next, options: .init(), appearance: .init())
+    #expect(stage.showing)
+    await stage.load(nil, options: .init(), appearance: .init())
+    #expect(!stage.showing)
+}
+
+/// The sample badge, marked with the test asking for it, so that no other
+/// test's badge, kept or being struck, is taken for it.
+private func sampleBadge(for test: String = #function) throws -> Data {
+    let here = URL(fileURLWithPath: #filePath)
+    var data = try Data(contentsOf: here.deletingLastPathComponent()
+        .deletingLastPathComponent().deletingLastPathComponent()
+        .appendingPathComponent("fixtures/svg/sample-badge.svg"))
+    data.append(contentsOf: Array("<!-- \(test) -->".utf8))
+    return data
 }

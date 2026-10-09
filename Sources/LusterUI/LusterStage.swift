@@ -18,6 +18,11 @@ final class LusterStage {
     /// `.minting` is a second mint.
     private(set) var change = 0
     @ObservationIgnored private(set) var scene: LusterScene?
+    /// Whether a badge is in the scene. A view with none shows its
+    /// placeholder.
+    private(set) var showing = false
+    /// The source and options `state` is about, once a load has begun.
+    @ObservationIgnored private var loaded: (source: LusterSource, options: LusterOptions)?
     /// The appearance last asked for, which a badge still being struck has to
     /// arrive in.
     @ObservationIgnored private var appearance = LusterAppearance()
@@ -41,11 +46,13 @@ final class LusterStage {
     func load(_ source: LusterSource?, options: LusterOptions,
               appearance: LusterAppearance) async {
         guard let source else {
+            loaded = nil
             show(nil)
             state = .idle
             return
         }
         self.appearance = appearance
+        loaded = (source, options)
         state = .minting
         do {
             let badge = try await LusterEngine.mint(source, options: options)
@@ -60,6 +67,9 @@ final class LusterStage {
             state = .ready(badge)
         } catch is CancellationError {
             // Superseded: the newer load reports its own state.
+        } catch _ where Task.isCancelled {
+            // Superseded too, failing as its loader was stopped: a loader
+            // may say so in its own words.
         } catch {
             state = .failed(error)
         }
@@ -70,9 +80,20 @@ final class LusterStage {
         await scene?.apply(appearance)
     }
 
+    /// What a placeholder for `source` and `options` is told: their failure
+    /// once they have failed, and `.minting` until then, before their load
+    /// has begun too.
+    func placeholderState(for source: LusterSource?, options: LusterOptions) -> LusterState {
+        if case .failed = state, let loaded, loaded.source == source, loaded.options == options {
+            return state
+        }
+        return .minting
+    }
+
     private func show(_ scene: LusterScene?) {
         self.scene?.root.removeFromParent()
         self.scene = scene
+        showing = scene != nil
         guard let scene else { return }
         scene.pose = pose
         scene.aspectRatio = aspectRatio

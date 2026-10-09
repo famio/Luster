@@ -1,16 +1,25 @@
 package dev.famio.luster.compose
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.AndroidEmbeddedExternalSurface
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
@@ -38,6 +47,15 @@ import kotlinx.coroutines.CancellationException
  * Minting runs off the main thread and the previous badge stays on screen
  * while a new one is struck. A different [source] or [options] mints again,
  * the same ones do nothing; a different [appearance] re-lights and re-plates.
+ *
+ * Until a badge is on screen it shows its placeholder, if it is given one:
+ *
+ * ```kotlin
+ * LusterView(source, Modifier.size(280.dp), placeholder = { state ->
+ *     if (state is LusterState.Failed) Text("Could not make the badge")
+ *     else CircularProgressIndicator()
+ * })
+ * ```
  */
 @Composable
 fun LusterView(
@@ -47,6 +65,13 @@ fun LusterView(
     appearance: LusterAppearance = LusterAppearance(),
     /** Whether a flick keeps the badge turning; never while the system has animations off. */
     momentumEnabled: Boolean = true,
+    /**
+     * Shown over the view, in the middle, while a source is set and no badge
+     * is on screen: while the first is struck, given [LusterState.Minting],
+     * and if it fails, given [LusterState.Failed]. A badge struck later takes
+     * the place of the one on screen without it.
+     */
+    placeholder: (@Composable (LusterState) -> Unit)? = null,
     onStateChange: ((LusterState) -> Unit)? = null,
 ) {
     val context = LocalContext.current
@@ -56,8 +81,14 @@ fun LusterView(
         onDispose { stage.release() }
     }
     val currentOnState by rememberUpdatedState(onStateChange)
+    var showing by remember { mutableStateOf(false) }
+    var failed by remember { mutableStateOf<LusterState.Failed?>(null) }
     SideEffect {
-        stage.onStateChange = { currentOnState?.invoke(it) }
+        stage.onShowingChange = { showing = it }
+        stage.onStateChange = {
+            failed = it as? LusterState.Failed
+            currentOnState?.invoke(it)
+        }
         stage.momentumEnabled = momentumEnabled
         // The options before the document, so a first mint is struck with them.
         stage.options = options
@@ -68,16 +99,35 @@ fun LusterView(
         while (true) withFrameNanos { stage.frame(it) }
     }
 
-    AndroidEmbeddedExternalSurface(
-        modifier = modifier.pointerInput(stage) { turn(stage) },
-        // Transparent, so the badge lies over what is behind it.
-        isOpaque = false,
-    ) {
-        onSurface { surface, width, height ->
-            stage.attach(surface, SwapChainFlags.CONFIG_TRANSPARENT, display)
-            stage.resize(width, height)
-            surface.onChanged { newWidth, newHeight -> stage.resize(newWidth, newHeight) }
-            surface.onDestroyed { stage.detach() }
+    Box(modifier) {
+        AndroidEmbeddedExternalSurface(
+            modifier = Modifier.fillMaxSize().pointerInput(stage) { turn(stage) },
+            // Transparent, so the badge lies over what is behind it.
+            isOpaque = false,
+        ) {
+            onSurface { surface, width, height ->
+                stage.attach(surface, SwapChainFlags.CONFIG_TRANSPARENT, display)
+                stage.resize(width, height)
+                surface.onChanged { newWidth, newHeight -> stage.resize(newWidth, newHeight) }
+                surface.onDestroyed { stage.detach() }
+            }
+        }
+        if (placeholder != null) {
+            AnimatedVisibility(
+                visible = source != null && !showing,
+                modifier = Modifier.matchParentSize(),
+                // There from the first frame, and fading once the badge is on
+                // screen.
+                enter = EnterTransition.None,
+                exit = fadeOut(tween(200)),
+            ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    // A failure is told only once it is this source's: the
+                    // stage takes a new one after this composition.
+                    val mine = failed?.takeIf { stage.source == source && stage.options == options }
+                    placeholder(mine ?: LusterState.Minting)
+                }
+            }
         }
     }
 }

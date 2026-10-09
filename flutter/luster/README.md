@@ -66,12 +66,27 @@ Minting runs on the engine's own threads, so the UI isolate keeps its frames, an
 the previous badge stays on screen while a new one is struck. A different `source`
 or `options` mints again; a different `appearance` only re-lights and re-plates.
 
+Until there is a badge to show, the widget can show something of yours in its
+place: a spinner while the first badge is struck, a word if it fails. It sits in
+the middle and fades as the badge arrives. A badge struck later takes the place of
+the one on screen without it.
+
+```dart
+LusterView(
+  source: source,
+  placeholder: (context, state) => state is LusterFailed
+      ? const Icon(Icons.error_outline)
+      : const CircularProgressIndicator(),
+)
+```
+
 | What | Type |
 | --- | --- |
 | The document | `LusterSource.url(uri)`, `.bytes(bytes)`, `.svg(text)` |
 | What to strike | `LusterOptions(metalLines:, withoutHiddenFaces:)` |
 | How to light it | `LusterAppearance(metal:, lighting:)`, with `LusterColor.gold / silver / copper` or any `LusterColor`, and `LusterLighting.showcase / off` |
 | What it is doing | `LusterIdle`, `LusterMinting`, `LusterReady(badge)`, `LusterFailed(error)` |
+| Until the badge is up | `placeholder: (context, state) => …`, given `LusterMinting` or `LusterFailed` |
 
 `Luster.init()` loads the engine and flutter_scene's shaders. The widget calls it
 itself; calling it at launch gets it done before the first badge is wanted. The

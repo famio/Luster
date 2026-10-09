@@ -1,6 +1,11 @@
 package dev.famio.luster.sample
 
+import android.content.Context
 import android.os.SystemClock
+import android.view.Gravity
+import android.view.View
+import android.widget.FrameLayout
+import android.widget.ProgressBar
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -20,6 +25,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -152,19 +158,21 @@ fun Demo(state: DemoState, dark: Boolean, tab: Launch.Tab, modifier: Modifier = 
                     modifier = badge,
                     options = state.settings.options,
                     appearance = state.settings.appearance,
+                    // The status line says why a badge failed.
+                    placeholder = { if (it is LusterState.Minting) CircularProgressIndicator() },
                     onStateChange = onState,
                 )
                 Launch.Tab.VIEW -> AndroidView(
-                    factory = { LusterViewClass(it) },
+                    factory = { BadgePanel(it) },
                     modifier = badge,
                     // Setting what is already set does nothing.
                     update = {
                         it.onStateChange = onState
-                        it.options = state.settings.options
-                        it.appearance = state.settings.appearance
-                        it.source = state.source
+                        it.badge.options = state.settings.options
+                        it.badge.appearance = state.settings.appearance
+                        it.badge.source = state.source
                     },
-                    onRelease = { it.release() },
+                    onRelease = { it.badge.release() },
                 )
             }
         }
@@ -298,5 +306,33 @@ fun BadgeList(settings: DemoSettings, stills: Boolean = false, modifier: Modifie
                 }
             }
         }
+    }
+}
+
+/**
+ * The View tab's badge, with a spinner over it as its placeholder. The view
+ * shows and hides the placeholder; the spinner in it is hidden on a failure,
+ * as the Compose tab shows nothing then.
+ */
+private class BadgePanel(context: Context) : FrameLayout(context) {
+    val badge = LusterViewClass(context)
+    private val spinner = ProgressBar(context)
+
+    var onStateChange: ((LusterState) -> Unit)? = null
+        set(value) {
+            field = value
+            badge.onStateChange = { state ->
+                spinner.visibility = if (state is LusterState.Failed) View.INVISIBLE else View.VISIBLE
+                value?.invoke(state)
+            }
+        }
+
+    init {
+        addView(badge, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        val placeholder = FrameLayout(context)
+        placeholder.addView(spinner, LayoutParams(LayoutParams.WRAP_CONTENT,
+                                                  LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        addView(placeholder, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        badge.placeholderView = placeholder
     }
 }
