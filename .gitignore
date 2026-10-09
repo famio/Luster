@@ -36,3 +36,6 @@ android/*/build/
 
 # Android: the engine's libraries are built by Scripts/build-android.sh.
 android/luster/src/main/jniLibs/
+
+# Claude Code: installs the examples on my own iPhone.
+.claude/skills/install-iphone/
