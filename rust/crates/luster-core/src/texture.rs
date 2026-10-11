@@ -490,6 +490,57 @@ pub fn sandblast() -> Texture {
     Texture { width: side as u32, height: side as u32, rgba }
 }
 
+/// The levels of a colour texture's mip chain below `texture` itself: each
+/// half the one above, rounded down and never under a texel, down to a
+/// single texel. A texel is the 2x2 block above it, clamped at the edge,
+/// averaged in linear light; its alpha is the block's mean.
+///
+/// It is flutter_scene's own filter, made here on the engine's threads
+/// rather than on the UI thread, where it holds up a frame for a large sheet.
+pub fn mipmaps(texture: &Texture) -> Vec<Texture> {
+    crate::work::ready();
+    // A byte has 256 values, each made linear once.
+    let linear: Vec<f64> = (0..=255u8)
+        .map(|byte| {
+            let c = f64::from(byte) / 255.0;
+            if c <= 0.04045 { c / 12.92 } else { math::powf((c + 0.055) / 1.055, 2.4) }
+        })
+        .collect();
+    let encoded = |light: f64| -> u8 {
+        let c = if light <= 0.0031308 { light * 12.92 } else { 1.055 * math::powf(light, 1.0 / 2.4) - 0.055 };
+        (c * 255.0).round().clamp(0.0, 255.0) as u8
+    };
+    let mut levels: Vec<Texture> = Vec::new();
+    let (mut w, mut h) = (texture.width as usize, texture.height as usize);
+    if w == 0 || h == 0 {
+        return levels;
+    }
+    while w > 1 || h > 1 {
+        let above = levels.last().unwrap_or(texture);
+        let (nw, nh) = ((w / 2).max(1), (h / 2).max(1));
+        let mut rgba = vec![0u8; nw * nh * 4];
+        rgba.par_chunks_mut(nw * 4).enumerate().for_each(|(y, row)| {
+            let y0 = (y * 2).min(h - 1);
+            let y1 = (y0 + 1).min(h - 1);
+            for (x, texel) in row.as_chunks_mut::<4>().0.iter_mut().enumerate() {
+                let x0 = (x * 2).min(w - 1);
+                let x1 = (x0 + 1).min(w - 1);
+                let block = [(y0 * w + x0) * 4, (y0 * w + x1) * 4, (y1 * w + x0) * 4, (y1 * w + x1) * 4];
+                for channel in 0..3 {
+                    let light = |at: usize| linear[above.rgba[at + channel] as usize];
+                    let sum = light(block[0]) + light(block[1]) + light(block[2]) + light(block[3]);
+                    texel[channel] = encoded(sum * 0.25);
+                }
+                let alpha: u32 = block.iter().map(|&at| u32::from(above.rgba[at + 3])).sum();
+                texel[3] = ((alpha + 2) / 4) as u8;
+            }
+        });
+        levels.push(Texture { width: nw as u32, height: nh as u32, rgba });
+        (w, h) = (nw, nh);
+    }
+    levels
+}
+
 fn lerp3(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
     [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
 }
@@ -687,6 +738,53 @@ mod packing {
         let (b, second) = atlas(&tiles);
         assert_eq!(first, second);
         assert_eq!((a.width, a.height, a.rgba), (b.width, b.height, b.rgba));
+    }
+}
+
+#[cfg(test)]
+mod mips {
+    use super::*;
+
+    fn texture(width: u32, height: u32, texel: impl Fn(u32, u32) -> [u8; 4]) -> Texture {
+        let rgba = (0..height).flat_map(|y| (0..width).map(move |x| (x, y))).flat_map(|(x, y)| texel(x, y)).collect();
+        Texture { width, height, rgba }
+    }
+
+    #[test]
+    fn each_level_halves_the_last_down_to_a_texel() {
+        let sizes: Vec<(u32, u32)> =
+            mipmaps(&texture(12, 5, |_, _| [0; 4])).iter().map(|t| (t.width, t.height)).collect();
+        assert_eq!(sizes, [(6, 2), (3, 1), (1, 1)]);
+        assert!(mipmaps(&texture(1, 1, |_, _| [0; 4])).is_empty());
+        assert!(mipmaps(&texture(0, 3, |_, _| [0; 4])).is_empty());
+    }
+
+    #[test]
+    fn an_even_colour_stays_that_colour() {
+        for byte in 0..=255u8 {
+            let even = texture(4, 4, |_, _| [byte, 255 - byte, byte / 2, byte]);
+            for level in mipmaps(&even) {
+                assert!(level.rgba.as_chunks::<4>().0.iter().all(|t| *t == [byte, 255 - byte, byte / 2, byte]), "{byte}");
+            }
+        }
+    }
+
+    /// Black and white side by side are half the light, which sRGB writes
+    /// as 188, not as the 128 halfway between their bytes.
+    #[test]
+    fn colour_is_averaged_in_light_and_alpha_as_it_is() {
+        let checks = texture(2, 2, |x, y| if (x + y) % 2 == 0 { [255, 255, 255, 255] } else { [0, 0, 0, 0] });
+        assert_eq!(mipmaps(&checks)[0].rgba, [188, 188, 188, 128]);
+    }
+
+    /// An odd last column is passed over, and a single row read twice, as
+    /// flutter_scene's filter has it.
+    #[test]
+    fn an_odd_edge_is_passed_over() {
+        let ramp = texture(3, 1, |x, _| [[0, 255, 255][x as usize], [0, 0, 255][x as usize], 0, 255]);
+        let levels = mipmaps(&ramp);
+        assert_eq!((levels[0].width, levels[0].height), (1, 1));
+        assert_eq!(&levels[0].rgba[..2], [188, 0]);
     }
 }
 

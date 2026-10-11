@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_gpu/gpu.dart' show StorageMode, gpuContext;
 import 'package:flutter_scene/gpu.dart' as gpu;
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart' as vm;
@@ -31,7 +32,7 @@ class _Part {
 class BadgeStage {
   final Scene scene = Scene();
   Node? _pivot;
-  final List<Texture2D> _sheets = [];
+  final List<TextureSource> _sheets = [];
   final List<_Part> _parts = [];
 
   /// What the badge on stage measures across its face, wide by tall.
@@ -173,8 +174,8 @@ class BadgeStage {
     _sheets.clear();
     if (badge == null) return;
     // Every colour the badge wears is on one sheet; the pieces point at it.
-    for (final texture in badge.textures) {
-      _sheets.add(Texture2D.fromPixels(texture.rgba, texture.width, texture.height));
+    for (final sheet in badge.textures) {
+      _sheets.add(_upload(sheet));
     }
     final node = Node(name: 'badge');
     wide = 0;
@@ -202,6 +203,21 @@ class BadgeStage {
     scene.add(node);
     _pivot = node;
     pose(_tilt, _spin);
+  }
+
+  /// A sheet with the mip chain the engine made for it: the chain
+  /// flutter_scene would make, on the UI thread, where a large sheet's holds
+  /// up a frame. Sampled as flutter_scene samples its own.
+  static TextureSource _upload(rust.Sheet sheet) {
+    final levels = math.min(sheet.levels.length, gpu.Texture.fullMipCount(sheet.width, sheet.height));
+    final texture = gpuContext.createTexture(StorageMode.hostVisible, sheet.width, sheet.height,
+        mipLevelCount: levels);
+    for (var level = 0; level < levels; level++) {
+      texture.overwrite(ByteData.sublistView(sheet.levels[level]), mipLevel: level);
+    }
+    // flutter_scene's gpu.Texture is flutter_gpu's own wherever this package
+    // runs; the analyzer is shown a stand-in for it.
+    return GpuTextureSource(texture as gpu.Texture);
   }
 
   /// Whether there is a badge on stage.

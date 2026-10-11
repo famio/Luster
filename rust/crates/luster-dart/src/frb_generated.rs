@@ -935,6 +935,18 @@ impl SseDecode for Vec<crate::api::luster::Light> {
     }
 }
 
+impl SseDecode for Vec<Vec<u8>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<Vec<u8>>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::luster::Material> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -983,6 +995,18 @@ impl SseDecode for Vec<u8> {
     }
 }
 
+impl SseDecode for Vec<crate::api::luster::Sheet> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::luster::Sheet>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::luster::Submesh> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -995,25 +1019,13 @@ impl SseDecode for Vec<crate::api::luster::Submesh> {
     }
 }
 
-impl SseDecode for Vec<crate::api::luster::Texture> {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut len_ = <i32>::sse_decode(deserializer);
-        let mut ans_ = Vec::with_capacity(len_ as usize);
-        for idx_ in 0..len_ {
-            ans_.push(<crate::api::luster::Texture>::sse_decode(deserializer));
-        }
-        return ans_;
-    }
-}
-
 impl SseDecode for crate::api::luster::LusterBadge {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_designKey = <String>::sse_decode(deserializer);
         let mut var_submeshes = <Vec<crate::api::luster::Submesh>>::sse_decode(deserializer);
         let mut var_materials = <Vec<crate::api::luster::Material>>::sse_decode(deserializer);
-        let mut var_textures = <Vec<crate::api::luster::Texture>>::sse_decode(deserializer);
+        let mut var_textures = <Vec<crate::api::luster::Sheet>>::sse_decode(deserializer);
         let mut var_struck = <RustAutoOpaqueMoi<Struck>>::sse_decode(deserializer);
         return crate::api::luster::LusterBadge {
             design_key: var_designKey,
@@ -1134,6 +1146,20 @@ impl SseDecode for crate::api::luster::SceneCalibration {
         return crate::api::luster::SceneCalibration {
             exposure: var_exposure,
             lamp_unit: var_lampUnit,
+        };
+    }
+}
+
+impl SseDecode for crate::api::luster::Sheet {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_width = <u32>::sse_decode(deserializer);
+        let mut var_height = <u32>::sse_decode(deserializer);
+        let mut var_levels = <Vec<Vec<u8>>>::sse_decode(deserializer);
+        return crate::api::luster::Sheet {
+            width: var_width,
+            height: var_height,
+            levels: var_levels,
         };
     }
 }
@@ -1604,6 +1630,23 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::luster::SceneCalibration>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::luster::Sheet {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.width.into_into_dart().into_dart(),
+            self.height.into_into_dart().into_dart(),
+            self.levels.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::luster::Sheet {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::luster::Sheet> for crate::api::luster::Sheet {
+    fn into_into_dart(self) -> crate::api::luster::Sheet {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::luster::Submesh {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -1813,6 +1856,16 @@ impl SseEncode for Vec<crate::api::luster::Light> {
     }
 }
 
+impl SseEncode for Vec<Vec<u8>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <Vec<u8>>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::luster::Material> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1853,6 +1906,16 @@ impl SseEncode for Vec<u8> {
     }
 }
 
+impl SseEncode for Vec<crate::api::luster::Sheet> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::luster::Sheet>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::luster::Submesh> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1863,23 +1926,13 @@ impl SseEncode for Vec<crate::api::luster::Submesh> {
     }
 }
 
-impl SseEncode for Vec<crate::api::luster::Texture> {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <i32>::sse_encode(self.len() as _, serializer);
-        for item in self {
-            <crate::api::luster::Texture>::sse_encode(item, serializer);
-        }
-    }
-}
-
 impl SseEncode for crate::api::luster::LusterBadge {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.design_key, serializer);
         <Vec<crate::api::luster::Submesh>>::sse_encode(self.submeshes, serializer);
         <Vec<crate::api::luster::Material>>::sse_encode(self.materials, serializer);
-        <Vec<crate::api::luster::Texture>>::sse_encode(self.textures, serializer);
+        <Vec<crate::api::luster::Sheet>>::sse_encode(self.textures, serializer);
         <RustAutoOpaqueMoi<Struck>>::sse_encode(self.struck, serializer);
     }
 }
@@ -1975,6 +2028,15 @@ impl SseEncode for crate::api::luster::SceneCalibration {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <f32>::sse_encode(self.exposure, serializer);
         <f32>::sse_encode(self.lamp_unit, serializer);
+    }
+}
+
+impl SseEncode for crate::api::luster::Sheet {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.width, serializer);
+        <u32>::sse_encode(self.height, serializer);
+        <Vec<Vec<u8>>>::sse_encode(self.levels, serializer);
     }
 }
 

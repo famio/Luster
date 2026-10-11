@@ -14,6 +14,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # A sheet's mip chain is made by the engine and uploaded as it is.
+  flutter_gpu:
+    sdk: flutter
   flutter_gpu_shaders: ^0.5.1
   # Exactly the version luster-dart was generated with: the runtime refuses any other.
   flutter_rust_bridge: 2.13.0

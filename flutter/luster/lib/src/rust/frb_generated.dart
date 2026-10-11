@@ -899,6 +899,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<Uint8List> dco_decode_list_list_prim_u_8_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_list_prim_u_8_strict).toList();
+  }
+
+  @protected
   List<Material> dco_decode_list_material(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_material).toList();
@@ -929,15 +935,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  List<Submesh> dco_decode_list_submesh(dynamic raw) {
+  List<Sheet> dco_decode_list_sheet(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
-    return (raw as List<dynamic>).map(dco_decode_submesh).toList();
+    return (raw as List<dynamic>).map(dco_decode_sheet).toList();
   }
 
   @protected
-  List<Texture> dco_decode_list_texture(dynamic raw) {
+  List<Submesh> dco_decode_list_submesh(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
-    return (raw as List<dynamic>).map(dco_decode_texture).toList();
+    return (raw as List<dynamic>).map(dco_decode_submesh).toList();
   }
 
   @protected
@@ -950,7 +956,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       designKey: dco_decode_String(arr[0]),
       submeshes: dco_decode_list_submesh(arr[1]),
       materials: dco_decode_list_material(arr[2]),
-      textures: dco_decode_list_texture(arr[3]),
+      textures: dco_decode_list_sheet(arr[3]),
       struck:
           dco_decode_AutoExplicit_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerStruck(
             arr[4],
@@ -1039,6 +1045,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return SceneCalibration(
       exposure: dco_decode_f_32(arr[0]),
       lampUnit: dco_decode_f_32(arr[1]),
+    );
+  }
+
+  @protected
+  Sheet dco_decode_sheet(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return Sheet(
+      width: dco_decode_u_32(arr[0]),
+      height: dco_decode_u_32(arr[1]),
+      levels: dco_decode_list_list_prim_u_8_strict(arr[2]),
     );
   }
 
@@ -1318,6 +1337,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<Uint8List> sse_decode_list_list_prim_u_8_strict(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <Uint8List>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_list_prim_u_8_strict(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<Material> sse_decode_list_material(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -1358,6 +1391,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<Sheet> sse_decode_list_sheet(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <Sheet>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_sheet(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<Submesh> sse_decode_list_submesh(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -1370,24 +1415,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  List<Texture> sse_decode_list_texture(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-
-    var len_ = sse_decode_i_32(deserializer);
-    var ans_ = <Texture>[];
-    for (var idx_ = 0; idx_ < len_; ++idx_) {
-      ans_.add(sse_decode_texture(deserializer));
-    }
-    return ans_;
-  }
-
-  @protected
   LusterBadge sse_decode_luster_badge(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_designKey = sse_decode_String(deserializer);
     var var_submeshes = sse_decode_list_submesh(deserializer);
     var var_materials = sse_decode_list_material(deserializer);
-    var var_textures = sse_decode_list_texture(deserializer);
+    var var_textures = sse_decode_list_sheet(deserializer);
     var var_struck =
         sse_decode_AutoExplicit_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerStruck(
           deserializer,
@@ -1480,6 +1513,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_exposure = sse_decode_f_32(deserializer);
     var var_lampUnit = sse_decode_f_32(deserializer);
     return SceneCalibration(exposure: var_exposure, lampUnit: var_lampUnit);
+  }
+
+  @protected
+  Sheet sse_decode_sheet(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_width = sse_decode_u_32(deserializer);
+    var var_height = sse_decode_u_32(deserializer);
+    var var_levels = sse_decode_list_list_prim_u_8_strict(deserializer);
+    return Sheet(width: var_width, height: var_height, levels: var_levels);
   }
 
   @protected
@@ -1744,6 +1786,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_list_prim_u_8_strict(
+    List<Uint8List> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_list_prim_u_8_strict(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_material(List<Material> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
@@ -1795,6 +1849,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_sheet(List<Sheet> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_sheet(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_submesh(List<Submesh> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
@@ -1804,21 +1867,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  void sse_encode_list_texture(List<Texture> self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_i_32(self.length, serializer);
-    for (final item in self) {
-      sse_encode_texture(item, serializer);
-    }
-  }
-
-  @protected
   void sse_encode_luster_badge(LusterBadge self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.designKey, serializer);
     sse_encode_list_submesh(self.submeshes, serializer);
     sse_encode_list_material(self.materials, serializer);
-    sse_encode_list_texture(self.textures, serializer);
+    sse_encode_list_sheet(self.textures, serializer);
     sse_encode_AutoExplicit_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerStruck(
       self.struck,
       serializer,
@@ -1892,6 +1946,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_f_32(self.exposure, serializer);
     sse_encode_f_32(self.lampUnit, serializer);
+  }
+
+  @protected
+  void sse_encode_sheet(Sheet self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.width, serializer);
+    sse_encode_u_32(self.height, serializer);
+    sse_encode_list_list_prim_u_8_strict(self.levels, serializer);
   }
 
   @protected

@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `core_lighting`, `split`, `translate`
+// These functions are ignored because they are not marked as `pub`: `core_lighting`, `sheet`, `split`, `translate`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `eq`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// The engine's version.
@@ -272,7 +272,7 @@ class LusterBadge {
   final String designKey;
   final List<Submesh> submeshes;
   final List<Material> materials;
-  final List<Texture> textures;
+  final List<Sheet> textures;
 
   /// The badge as the engine struck it, which is what a GLB is written from:
   /// the arrays above are already in flutter_scene's space.
@@ -460,6 +460,33 @@ class SceneCalibration {
           runtimeType == other.runtimeType &&
           exposure == other.exposure &&
           lampUnit == other.lampUnit;
+}
+
+/// A badge's texture with its mip chain, made here rather than by
+/// flutter_scene on the UI thread: the texture's own pixels first, then each
+/// level below, each the RGBA8 sRGB of half the one before, to one texel.
+class Sheet {
+  final int width;
+  final int height;
+  final List<Uint8List> levels;
+
+  const Sheet({
+    required this.width,
+    required this.height,
+    required this.levels,
+  });
+
+  @override
+  int get hashCode => width.hashCode ^ height.hashCode ^ levels.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Sheet &&
+          runtimeType == other.runtimeType &&
+          width == other.width &&
+          height == other.height &&
+          levels == other.levels;
 }
 
 /// One submesh as separate attribute arrays, the shape flutter_scene's

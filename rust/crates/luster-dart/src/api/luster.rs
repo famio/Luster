@@ -99,7 +99,7 @@ pub struct LusterBadge {
     pub design_key: String,
     pub submeshes: Vec<Submesh>,
     pub materials: Vec<Material>,
-    pub textures: Vec<Texture>,
+    pub textures: Vec<Sheet>,
     /// The badge as the engine struck it, which is what a GLB is written from:
     /// the arrays above are already in flutter_scene's space.
     pub struck: RustAutoOpaque<Struck>,
@@ -201,11 +201,7 @@ fn translate(badge: Arc<badge::Badge>) -> LusterBadge {
                 texture: m.texture,
             })
             .collect(),
-        textures: badge
-            .textures
-            .iter()
-            .map(|t| Texture { width: t.width, height: t.height, rgba: t.rgba.clone() })
-            .collect(),
+        textures: badge.textures.iter().map(sheet).collect(),
         struck: RustAutoOpaque::new(Struck(badge)),
     }
 }
@@ -253,6 +249,20 @@ pub struct Texture {
     pub width: u32,
     pub height: u32,
     pub rgba: Vec<u8>,
+}
+
+/// A badge's texture with its mip chain, made here rather than by
+/// flutter_scene on the UI thread: the texture's own pixels first, then each
+/// level below, each the RGBA8 sRGB of half the one before, to one texel.
+pub struct Sheet {
+    pub width: u32,
+    pub height: u32,
+    pub levels: Vec<Vec<u8>>,
+}
+
+fn sheet(t: &texture::Texture) -> Sheet {
+    let below = texture::mipmaps(t).into_iter().map(|level| level.rgba);
+    Sheet { width: t.width, height: t.height, levels: std::iter::once(t.rgba.clone()).chain(below).collect() }
 }
 
 /// The panorama the badge reflects (equirectangular): the showcase's.

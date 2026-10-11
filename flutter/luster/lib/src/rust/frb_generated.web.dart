@@ -122,6 +122,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Light> dco_decode_list_light(dynamic raw);
 
   @protected
+  List<Uint8List> dco_decode_list_list_prim_u_8_strict(dynamic raw);
+
+  @protected
   List<Material> dco_decode_list_material(dynamic raw);
 
   @protected
@@ -137,10 +140,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
-  List<Submesh> dco_decode_list_submesh(dynamic raw);
+  List<Sheet> dco_decode_list_sheet(dynamic raw);
 
   @protected
-  List<Texture> dco_decode_list_texture(dynamic raw);
+  List<Submesh> dco_decode_list_submesh(dynamic raw);
 
   @protected
   LusterBadge dco_decode_luster_badge(dynamic raw);
@@ -168,6 +171,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SceneCalibration dco_decode_scene_calibration(dynamic raw);
+
+  @protected
+  Sheet dco_decode_sheet(dynamic raw);
 
   @protected
   Submesh dco_decode_submesh(dynamic raw);
@@ -278,6 +284,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Light> sse_decode_list_light(SseDeserializer deserializer);
 
   @protected
+  List<Uint8List> sse_decode_list_list_prim_u_8_strict(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<Material> sse_decode_list_material(SseDeserializer deserializer);
 
   @protected
@@ -293,10 +304,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
-  List<Submesh> sse_decode_list_submesh(SseDeserializer deserializer);
+  List<Sheet> sse_decode_list_sheet(SseDeserializer deserializer);
 
   @protected
-  List<Texture> sse_decode_list_texture(SseDeserializer deserializer);
+  List<Submesh> sse_decode_list_submesh(SseDeserializer deserializer);
 
   @protected
   LusterBadge sse_decode_luster_badge(SseDeserializer deserializer);
@@ -324,6 +335,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SceneCalibration sse_decode_scene_calibration(SseDeserializer deserializer);
+
+  @protected
+  Sheet sse_decode_sheet(SseDeserializer deserializer);
 
   @protected
   Submesh sse_decode_submesh(SseDeserializer deserializer);
@@ -447,6 +461,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_light(List<Light> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_list_prim_u_8_strict(
+    List<Uint8List> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_material(List<Material> self, SseSerializer serializer);
 
   @protected
@@ -471,10 +491,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_list_submesh(List<Submesh> self, SseSerializer serializer);
+  void sse_encode_list_sheet(List<Sheet> self, SseSerializer serializer);
 
   @protected
-  void sse_encode_list_texture(List<Texture> self, SseSerializer serializer);
+  void sse_encode_list_submesh(List<Submesh> self, SseSerializer serializer);
 
   @protected
   void sse_encode_luster_badge(LusterBadge self, SseSerializer serializer);
@@ -508,6 +528,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     SceneCalibration self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_sheet(Sheet self, SseSerializer serializer);
 
   @protected
   void sse_encode_submesh(Submesh self, SseSerializer serializer);
