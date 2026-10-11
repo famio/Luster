@@ -880,7 +880,7 @@ checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
 name = "luster-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "luster-core",
  "serde_json",
@@ -888,7 +888,7 @@ dependencies = [
 
 [[package]]
 name = "luster-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "i_overlay",
  "image",
@@ -905,7 +905,7 @@ dependencies = [
 
 [[package]]
 name = "luster-ffi"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "luster-core",
  "thiserror",
@@ -914,7 +914,7 @@ dependencies = [
 
 [[package]]
 name = "luster_dart"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "flutter_rust_bridge",
  "luster-core",
@@ -1614,7 +1614,7 @@ dependencies = [
 
 [[package]]
 name = "uniffi-bindgen"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "uniffi",
 ]

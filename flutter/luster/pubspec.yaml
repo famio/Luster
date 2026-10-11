@@ -1,6 +1,6 @@
 name: luster
 description: "Mints SVG artwork into a lit 3D badge, rendered with flutter_scene. The engine is Luster's Rust core."
-version: 0.1.0
+version: 0.2.0
 homepage: https://github.com/famio/Luster
 repository: https://github.com/famio/Luster
 issue_tracker: https://github.com/famio/Luster/issues
