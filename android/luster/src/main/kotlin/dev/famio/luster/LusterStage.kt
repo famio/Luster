@@ -541,6 +541,7 @@ class LusterStage(private val context: Context) {
         engine.destroyScene(scene)
         engine.destroyCameraComponent(cameraEntity)
         materials.destroyMaterials()
+        materials.destroy()
         engine.destroy()
     }
 }
