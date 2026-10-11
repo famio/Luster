@@ -120,7 +120,8 @@ for the enamel, it shows the colours the document paints.
 - **Android** — Filament, straight from the engine's buffers and textures with no glTF
   in between, shaded with gltfio's ubershaders as the same badge's glTF would be. The
   studio is built as a cubemap at runtime, so no baked environment travels with the
-  app.
+  app. A frame is drawn only when something has changed: a badge at rest is drawn
+  once, and the surface keeps it.
 - **Flutter** — flutter_scene, in Dart rather than a platform view: the engine hands
   over the meshes and the sheet of colours, and the widget builds the scene.
   flutter_scene's tone curves keep a colour's saturation as it brightens, where

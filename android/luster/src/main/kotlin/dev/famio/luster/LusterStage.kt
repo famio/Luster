@@ -36,6 +36,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -158,6 +159,40 @@ class LusterStage(private val context: Context) {
     private var dragging = false
     private var lastFrame = 0L
 
+    /**
+     * Whether what is on screen is out of date. A badge at rest is drawn
+     * once and left: the surface keeps the last frame, and drawing it again
+     * every vsync would only keep the GPU busy and the phone warm.
+     */
+    private var stale = true
+    private val wanted = Channel<Unit>(Channel.CONFLATED)
+
+    /** Told when the stage wants a frame and may not be getting them. */
+    var onFrameWanted: (() -> Unit)? = null
+
+    /**
+     * Whether the stage needs another frame: to draw a change, to coast on,
+     * or to hear that the GPU has drawn the first badge.
+     */
+    val wantsFrames: Boolean
+        get() = !released && (velocity != 0f || arriving != null || (stale && swapChain != null))
+
+    /** Waits until the stage [wantsFrames]. */
+    suspend fun frameWanted() {
+        while (!wantsFrames) wanted.receive()
+    }
+
+    /** Something on screen has changed: the next frame draws it. */
+    private fun redraw() {
+        stale = true
+        wake()
+    }
+
+    private fun wake() {
+        wanted.trySend(Unit)
+        onFrameWanted?.invoke()
+    }
+
     init {
         view.camera = camera
         view.scene = scene
@@ -183,6 +218,7 @@ class LusterStage(private val context: Context) {
         swapChain?.let { engine.destroySwapChain(it) }
         swapChain = engine.createSwapChain(surface, flags)
         if (display != null) displayHelper.attach(renderer, display)
+        redraw()
     }
 
     fun resize(width: Int, height: Int) {
@@ -205,7 +241,8 @@ class LusterStage(private val context: Context) {
 
     /**
      * Advances the coast to [frameTimeNanos] and, when [draw] says the
-     * surface is ready, draws a frame. Call it once a frame.
+     * surface is ready and something has changed, draws a frame. Call it
+     * once a frame while the stage [wantsFrames].
      */
     fun frame(frameTimeNanos: Long, draw: Boolean = true) {
         if (released) return
@@ -218,9 +255,11 @@ class LusterStage(private val context: Context) {
             turn()
         }
         val chain = swapChain ?: return
-        if (draw && renderer.beginFrame(chain, frameTimeNanos)) {
+        // A frame Filament skips, the GPU being behind, is still to draw.
+        if (draw && stale && renderer.beginFrame(chain, frameTimeNanos)) {
             renderer.render(view)
             renderer.endFrame()
+            stale = false
             if (unseen) {
                 unseen = false
                 arriving = engine.createFence()
@@ -233,6 +272,9 @@ class LusterStage(private val context: Context) {
                 showing = true
             }
         }
+        // Frames stop here until something changes: the next starts the
+        // clock again.
+        if (!wantsFrames) lastFrame = 0L
     }
 
     /** No frame is coming for a while: the next one starts the clock again. */
@@ -265,6 +307,7 @@ class LusterStage(private val context: Context) {
         dragging = false
         if (velocity != null && momentumEnabled && !reducedMotion()) {
             this.velocity = velocity * handling.spinPerPoint
+            wake()
         }
     }
 
@@ -311,6 +354,7 @@ class LusterStage(private val context: Context) {
         arriving = null
         if (parts == null || grit == null) {
             showing = false
+            redraw()
             return
         }
 
@@ -320,6 +364,7 @@ class LusterStage(private val context: Context) {
         badgeSize = parts.size
         frame()
         turn()
+        redraw()
         // Only the first badge waits for its frame: a later one takes the
         // place of one on screen, with no placeholder to take away.
         if (showing) return
@@ -359,6 +404,7 @@ class LusterStage(private val context: Context) {
             scene.addEntity(entity)
             lights.add(entity)
         }
+        redraw()
 
         // Gold is fully metallic: without something to reflect it renders
         // black, so the showcase's panorama is the environment, whatever the
@@ -387,6 +433,7 @@ class LusterStage(private val context: Context) {
             .intensity(preset.environment * preset.filamentEnvironmentLux)
             .build(engine)
             .also { scene.indirectLight = it }
+        redraw()
     }
 
     /**
@@ -436,6 +483,7 @@ class LusterStage(private val context: Context) {
         val fov = fieldOfView(badgeSize.first, badgeSize.second, aspect)
         camera.setProjection(fov.toDouble(), aspect.toDouble(), 0.1, 100.0, Camera.Fov.VERTICAL)
         camera.lookAt(0.0, 0.0, setup.distance.toDouble(), 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+        redraw()
     }
 
     // MARK: Turning it
@@ -448,6 +496,7 @@ class LusterStage(private val context: Context) {
         // The camera looks down -z, so how squarely the reverse faces it is
         // the z of the reverse's normal, -z turned by the pose.
         model.face(-cos(pose[0]) * cos(pose[1]))
+        redraw()
     }
 
     /**

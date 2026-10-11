@@ -96,7 +96,12 @@ fun LusterView(
         stage.source = source
     }
     LaunchedEffect(stage) {
-        while (true) withFrameNanos { stage.frame(it) }
+        // Frames only while the stage wants them: a badge at rest stays as
+        // last drawn.
+        while (true) {
+            stage.frameWanted()
+            withFrameNanos { stage.frame(it) }
+        }
     }
 
     Box(modifier) {

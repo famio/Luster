@@ -110,6 +110,7 @@ class LusterView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         uiHelper.attachTo(this)
         isClickable = true
         stage.onShowingChange = { updatePlaceholder(fade = true) }
+        stage.onFrameWanted = { schedule() }
     }
 
     private fun updatePlaceholder(fade: Boolean) {
@@ -181,21 +182,32 @@ class LusterView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     /** Apple measures a drag in points; this turns Android's pixels into them. */
     private fun pointScale() = 160f / resources.displayMetrics.densityDpi
 
+    /** Whether a frame callback is posted. Frames are asked for only while the stage wants them. */
+    private var scheduled = false
+
     private val frames = object : Choreographer.FrameCallback {
         override fun doFrame(frameTimeNanos: Long) {
-            choreographer.postFrameCallback(this)
+            scheduled = false
             stage.frame(frameTimeNanos, draw = uiHelper.isReadyToRender)
+            if (stage.wantsFrames) schedule()
         }
+    }
+
+    private fun schedule() {
+        if (scheduled || !isAttachedToWindow || stage.released) return
+        scheduled = true
+        choreographer.postFrameCallback(frames)
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        if (!stage.released) choreographer.postFrameCallback(frames)
+        schedule()
     }
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         choreographer.removeFrameCallback(frames)
+        scheduled = false
         stage.pause()
     }
 
@@ -203,6 +215,7 @@ class LusterView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     fun release() {
         if (stage.released) return
         choreographer.removeFrameCallback(frames)
+        scheduled = false
         tracker?.recycle()
         tracker = null
         uiHelper.detach()
