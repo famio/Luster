@@ -37,9 +37,10 @@ if ! grep -q 'path: "rust/target/apple/LusterFFI.xcframework"' Package.swift; th
     exit 1
 fi
 
-# The files the version is written into. A dry run puts back what it wrote,
-# from copies rather than from git, so nothing else can be caught by it.
-VERSIONED=(Package.swift rust/Cargo.toml flutter/luster/pubspec.yaml
+# The files the version is written into, here or by cargo as it builds. A dry
+# run puts back what it wrote, from copies rather than from git, so nothing
+# else can be caught by it.
+VERSIONED=(Package.swift rust/Cargo.toml rust/Cargo.lock flutter/luster/pubspec.yaml
            flutter/luster/android/build.gradle
            android/luster/build.gradle.kts android/luster-compose/build.gradle.kts
            android/sample/build.gradle.kts)
