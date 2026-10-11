@@ -333,7 +333,11 @@ class LusterStage(private val context: Context) {
                 // The buffers are read off the main thread; Filament's own
                 // objects are made on it, where the engine lives.
                 val parts = withContext(Dispatchers.Default) { BadgeParts.of(badge.core) }
-                show(parts, grit())
+                // Gold with nothing to reflect is black: the first badge waits
+                // for the panorama, which is seldom still being made.
+                val grit = grit()
+                panorama?.join()
+                show(parts, grit)
                 onStateChange?.invoke(LusterState.Ready(badge))
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
                 throw cancelled
