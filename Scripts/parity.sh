@@ -1,9 +1,9 @@
 #!/bin/bash
 # Checks the engine against the dumps in fixtures/golden: what it reads from a
 # document, the cells it makes of it, the pieces it strikes, with its lines
-# plated and left in the metal, and a hash of each GLB it writes. The dumps are
-# this engine's own record: anything that moves in one of them is a difference,
-# down to a single byte of a badge.
+# plated and left in the metal, and a hash of each GLB it writes, with no
+# version in it. The dumps are this engine's own record: anything that moves in
+# one of them is a difference, down to a single byte of a badge.
 #
 #   Scripts/parity.sh
 #

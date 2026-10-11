@@ -283,11 +283,12 @@ fn dump(data: &[u8]) -> Result<Value, luster_core::Error> {
         "metal-lines": struck(true)?,
     });
     // The badge itself, byte for byte: the same document has to give the same
-    // GLB on every platform the engine is built for.
+    // GLB on every platform the engine is built for. It is written with no
+    // version, which a release changes and the badge does not.
     let glb = |metal_lines, without_hidden_faces| -> Result<String, luster_core::Error> {
         let options = luster_core::MintOptions { metal_lines, without_hidden_faces };
         let badge = luster_core::mint_with(data, &options, &cancel)?;
-        Ok(fnv(&luster_core::export::glb(&badge, 1.0, luster_core::badge::GOLD)))
+        Ok(fnv(&luster_core::export::glb_generated_by(&badge, 1.0, luster_core::badge::GOLD, "Luster")))
     };
     let badges = json!({
         "plated": glb(false, false)?,

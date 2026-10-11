@@ -2,4 +2,4 @@
 
 pub mod glb;
 
-pub use glb::glb;
+pub use glb::{glb, glb_generated_by};

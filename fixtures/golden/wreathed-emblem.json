@@ -880,9 +880,9 @@
     }
   ],
   "glb": {
-    "metal-lines": "8147742c92a05444",
-    "plated": "f0fe20b1d29c1cd9",
-    "without-hidden-faces": "922d21937badf1d4"
+    "metal-lines": "65fe212bcd42502d",
+    "plated": "85a68894b0336f30",
+    "without-hidden-faces": "5cea54ef4a01aa41"
   },
   "hasPainting": true,
   "outline": {

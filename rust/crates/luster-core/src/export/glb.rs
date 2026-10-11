@@ -17,6 +17,12 @@ use crate::model::linear;
 /// The textures travel with it: what the document paints on each face, and
 /// the sandblast on the reverse, as PNGs in the same binary chunk.
 pub fn glb(badge: &Badge, scale: f32, metal: Rgba) -> Vec<u8> {
+    glb_generated_by(badge, scale, metal, &format!("Luster {}", crate::version()))
+}
+
+/// [`glb`], naming `generator` as what wrote it. Written as `Luster` alone,
+/// with no version, a badge is the same bytes from one release to the next.
+pub fn glb_generated_by(badge: &Badge, scale: f32, metal: Rgba, generator: &str) -> Vec<u8> {
     let mut buffer: Vec<u8> = Vec::new();
     let mut views = String::new();
     let mut accessors = String::new();
@@ -123,7 +129,7 @@ pub fn glb(badge: &Badge, scale: f32, metal: Rgba) -> Vec<u8> {
         (0..badge.submeshes.len()).map(|i| i.to_string()).collect::<Vec<_>>().join(",");
     let json = format!(
         concat!(
-            r#"{{"asset":{{"version":"2.0","generator":"Luster {version}"}},"#,
+            r#"{{"asset":{{"version":"2.0","generator":{generator}}},"#,
             r#""scene":0,"scenes":[{{"nodes":[{root}]}}],"#,
             r#""nodes":[{nodes}{{"name":"badge","children":[{children}]}}],"#,
             r#""meshes":[{meshes}],"materials":[{materials}],"#,
@@ -131,7 +137,7 @@ pub fn glb(badge: &Badge, scale: f32, metal: Rgba) -> Vec<u8> {
             r#""accessors":[{accessors}],"bufferViews":[{views}],"#,
             r#""buffers":[{{"byteLength":{length}}}]}}"#
         ),
-        version = crate::version(),
+        generator = quoted(generator),
         root = badge.submeshes.len(),
         nodes = nodes,
         children = children,
@@ -273,6 +279,19 @@ mod tests {
         assert!(binary % 4 == 0 && (length..length + 4).contains(&binary), "{length} in {binary}");
         // One node per mesh, and one more holding them together.
         assert_eq!(json["nodes"].as_array().unwrap().len(), badge.submeshes.len() + 1);
+    }
+
+    /// A GLB says which engine wrote it, and nothing else in it does: written
+    /// under another name, only that name changes.
+    #[test]
+    fn only_the_generator_names_the_engine() {
+        let badge = badge();
+        let (json, _) = parts(&glb(&badge, 1.0, GOLD));
+        assert_eq!(json["asset"]["generator"], format!("Luster {}", crate::version()));
+        let (mut named, _) = parts(&glb_generated_by(&badge, 1.0, GOLD, "Luster"));
+        assert_eq!(named["asset"]["generator"], "Luster");
+        named["asset"]["generator"] = json["asset"]["generator"].clone();
+        assert_eq!(named, json);
     }
 
     #[test]
