@@ -65,10 +65,12 @@ internal class Faces(val size: Int, val floats: FloatBuffer) {
             val floats = ByteBuffer.allocateDirect(size * size * 6 * 3 * 4)
                 .order(ByteOrder.nativeOrder())
                 .asFloatBuffer()
+            // A byte has 256 values: each is made linear once, not once a texel.
+            val linear = FloatArray(256) { (it / 255f).linear() }
             var at = 0
             while (at < texture.rgba.size) {
                 for (channel in 0 until 3) {
-                    floats.put(((texture.rgba[at + channel].toInt() and 0xFF) / 255f).linear())
+                    floats.put(linear[texture.rgba[at + channel].toInt() and 0xFF])
                 }
                 at += 4
             }
