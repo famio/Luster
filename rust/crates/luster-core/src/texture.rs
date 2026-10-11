@@ -1,6 +1,10 @@
 //! Generated textures: the showcase's panorama the metal reflects, the
 //! reverse's grit, and the sheet a badge's painted faces are packed on.
 
+use std::sync::OnceLock;
+
+use rayon::prelude::*;
+
 use crate::math;
 
 /// RGBA8, rows top to bottom. Colour textures are sRGB-encoded; a normal map
@@ -62,7 +66,20 @@ pub const SHOWCASE_RANGE: f32 = 14.0;
 /// art's colours from going black wherever it points. Strips far round
 /// either side line the rim. The surround is all but black, which is what
 /// gives the metal its edges.
+///
+/// Painted once for the process and copied out: every view, still and
+/// cubemap is lit by the same one.
 pub fn showcase_environment() -> Texture {
+    showcase().clone()
+}
+
+fn showcase() -> &'static Texture {
+    static PAINTED: OnceLock<Texture> = OnceLock::new();
+    PAINTED.get_or_init(paint_showcase)
+}
+
+fn paint_showcase() -> Texture {
+    crate::work::ready();
     let panels = [
         // Overhead, and high up either side: most of what the enamel's
         // colour is lit by.
@@ -117,12 +134,12 @@ pub fn showcase_environment() -> Texture {
         })
         .collect();
     let mut rgba = vec![0u8; w * h * 4];
-    for y in 0..h {
+    rgba.par_chunks_mut(w * 4).enumerate().for_each(|(y, row)| {
         let theta = (y as f32 + 0.5) / h as f32 * std::f32::consts::PI;
         let (st, ct) = (math::sin(theta), math::cos(theta));
         let elevation = 90.0 - theta.to_degrees();
         let base = graded(&surround, elevation);
-        for (x, &(sl, cl)) in columns.iter().enumerate() {
+        for (&(sl, cl), pixel) in columns.iter().zip(row.as_chunks_mut::<4>().0) {
             let d = [st * sl, ct, -st * cl];
             let mut c = base;
             for p in &placed {
@@ -133,14 +150,13 @@ pub fn showcase_environment() -> Texture {
                     }
                 }
             }
-            let o = (y * w + x) * 4;
             for k in 0..3 {
                 let encoded = crate::model::encoded((c[k] / SHOWCASE_RANGE).clamp(0.0, 1.0));
-                rgba[o + k] = (encoded * 255.0).round() as u8;
+                pixel[k] = (encoded * 255.0).round() as u8;
             }
-            rgba[o + 3] = 255;
+            pixel[3] = 255;
         }
-    }
+    });
     Texture { width: w as u32, height: h as u32, rgba }
 }
 
@@ -268,28 +284,26 @@ fn normalized(v: [f32; 3]) -> [f32; 3] {
 /// building it here means no baked file has to travel with the app. The
 /// pixels stay sRGB-encoded, as the panorama's are.
 pub fn showcase_cubemap(size: u32) -> Texture {
-    cubemap(&showcase_environment(), size)
+    cubemap(showcase(), size)
 }
 
 /// What a diffuse surface receives from the showcase, in the same layout.
 pub fn showcase_irradiance(size: u32) -> Texture {
-    irradiance(&showcase_environment(), size)
+    irradiance(showcase(), size)
 }
 
 fn cubemap(panorama: &Texture, size: u32) -> Texture {
     let size = size.max(1) as usize;
     let mut rgba = vec![0u8; size * size * 6 * 4];
-    for face in 0..6 {
-        for y in 0..size {
-            for x in 0..size {
-                let u = (x as f32 + 0.5) / size as f32 * 2.0 - 1.0;
-                let v = (y as f32 + 0.5) / size as f32 * 2.0 - 1.0;
-                let colour = look_up(panorama, direction(face, u, v));
-                let at = ((face * size + y) * size + x) * 4;
-                rgba[at..at + 4].copy_from_slice(&colour);
-            }
+    // A row of the stack at a time: the faces are one above the next.
+    rgba.par_chunks_mut(size * 4).enumerate().for_each(|(row, line)| {
+        let (face, y) = (row / size, row % size);
+        for (x, pixel) in line.as_chunks_mut::<4>().0.iter_mut().enumerate() {
+            let u = (x as f32 + 0.5) / size as f32 * 2.0 - 1.0;
+            let v = (y as f32 + 0.5) / size as f32 * 2.0 - 1.0;
+            *pixel = look_up(panorama, direction(face, u, v));
         }
-    }
+    });
     Texture { width: size as u32, height: (size * 6) as u32, rgba }
 }
 
@@ -318,35 +332,33 @@ fn irradiance(panorama: &Texture, size: u32) -> Texture {
 
     let size = size.max(1) as usize;
     let mut rgba = vec![0u8; size * size * 6 * 4];
-    for face in 0..6 {
-        for y in 0..size {
-            for x in 0..size {
-                let u = (x as f32 + 0.5) / size as f32 * 2.0 - 1.0;
-                let v = (y as f32 + 0.5) / size as f32 * 2.0 - 1.0;
-                let n = direction(face, u, v);
-                let mut sum = [0.0f32; 3];
-                for (dir, colour, weight) in &light {
-                    let cosine = n[0] * dir[0] + n[1] * dir[1] + n[2] * dir[2];
-                    if cosine <= 0.0 {
-                        continue;
-                    }
-                    let w = cosine * weight * scale;
-                    for c in 0..3 {
-                        sum[c] += colour[c] * w;
-                    }
+    rgba.par_chunks_mut(size * 4).enumerate().for_each(|(row, line)| {
+        let (face, y) = (row / size, row % size);
+        for (x, pixel) in line.as_chunks_mut::<4>().0.iter_mut().enumerate() {
+            let u = (x as f32 + 0.5) / size as f32 * 2.0 - 1.0;
+            let v = (y as f32 + 0.5) / size as f32 * 2.0 - 1.0;
+            let n = direction(face, u, v);
+            let mut sum = [0.0f32; 3];
+            for (dir, colour, weight) in &light {
+                let cosine = n[0] * dir[0] + n[1] * dir[1] + n[2] * dir[2];
+                if cosine <= 0.0 {
+                    continue;
                 }
-                let encode = |c: f32| {
-                    // The average radiance, not the integral: a surface of
-                    // albedo 1 under an even sky reads as that sky.
-                    let c = (c / std::f32::consts::PI).clamp(0.0, 1.0);
-                    let s = crate::model::encoded(c);
-                    (s * 255.0).round() as u8
-                };
-                let at = ((face * size + y) * size + x) * 4;
-                rgba[at..at + 4].copy_from_slice(&[encode(sum[0]), encode(sum[1]), encode(sum[2]), 255]);
+                let w = cosine * weight * scale;
+                for c in 0..3 {
+                    sum[c] += colour[c] * w;
+                }
             }
+            let encode = |c: f32| {
+                // The average radiance, not the integral: a surface of
+                // albedo 1 under an even sky reads as that sky.
+                let c = (c / std::f32::consts::PI).clamp(0.0, 1.0);
+                let s = crate::model::encoded(c);
+                (s * 255.0).round() as u8
+            };
+            *pixel = [encode(sum[0]), encode(sum[1]), encode(sum[2]), 255];
         }
-    }
+    });
     Texture { width: size as u32, height: (size * 6) as u32, rgba }
 }
 
@@ -510,9 +522,17 @@ mod tests {
         assert!(panorama.rgba.chunks_exact(4).all(|p| p[0] < 255 && p[1] < 255 && p[2] < 255));
     }
 
+    /// Every renderer's exposure was matched against these bytes: painting
+    /// the showcase any differently, on any platform or in any order of
+    /// threads, is recalibrating all of them.
     #[test]
-    fn the_showcase_is_the_same_every_time() {
-        assert_eq!(showcase_environment().rgba, showcase_environment().rgba);
+    fn the_showcase_is_painted_as_it_was_calibrated() {
+        let fnv = |bytes: &[u8]| {
+            bytes.iter().fold(0xcbf2_9ce4_8422_2325u64, |h, &b| (h ^ u64::from(b)).wrapping_mul(0x0100_0000_01b3))
+        };
+        assert_eq!(fnv(&showcase_environment().rgba), 0xc9ac_d063_b9e8_60c8);
+        assert_eq!(fnv(&showcase_cubemap(64).rgba), 0xb4c9_b2af_3ca4_fce8);
+        assert_eq!(fnv(&showcase_irradiance(8).rgba), 0x0737_21b1_5fe2_a3e5);
     }
 
     #[test]
