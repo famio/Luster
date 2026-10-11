@@ -2,18 +2,19 @@ import CoreGraphics
 import Foundation
 internal import LusterCore
 
-/// The studio's shared, generated resources, made once per process off the
-/// main actor.
+/// The studio's generated images, made off the main actor. What RealityKit
+/// makes of them is kept, once, by `StudioResources`.
 actor Studio {
     static let shared = Studio()
 
-    private var image: CGImage?
-
     /// The panorama the badge reflects, as an sRGB image.
     func environmentImage() -> CGImage? {
-        if let image { return image }
-        image = CGImage.srgb(LusterCore.showcaseEnvironment())
-        return image
+        CGImage.srgb(LusterCore.showcaseEnvironment())
+    }
+
+    /// The sandblast on a badge's reverse, as an image of its normals.
+    func gritImage() -> CGImage? {
+        CGImage.srgb(LusterCore.sandblast())
     }
 }
 

@@ -159,7 +159,7 @@ final still = await LusterSnapshot.image(badge, pixelSize: 512);    // ui.Image
   badge.
 - **Prewarming** — `LusterEngine.prewarm()` (Swift) or `Luster.prewarm()` (Android) at
   launch prepares the lighting ahead of the first badge; `Luster.init()` does the same
-  in Flutter.
+  in Flutter. A view starts it too, alongside its first mint, if the app has not.
 - **Cancelling** the task or coroutine stops a mint, unless someone else still wants the
   same badge.
 

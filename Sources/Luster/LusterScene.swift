@@ -83,25 +83,36 @@ public final class LusterScene {
 
     public static func make(_ badge: LusterBadge, appearance: LusterAppearance) async throws -> LusterScene {
         let clock = Stopwatch()
-        let descriptors = await descriptors(for: badge)
-        clock.lap("descriptors")
-        let mesh = try await MeshResource(from: descriptors)
-        clock.lap("mesh")
+        // None of these waits on another: the mesh is built off the main
+        // actor while the materials are made on it, and the studio's shared
+        // resources are ready at once unless this is the first badge.
+        async let mesh = Self.mesh(for: badge)
+        async let environment = StudioResources.environment()
+        async let grit = StudioResources.sandblast()
         let materials = badge.core.materials()
         // The faces the document paints, and the reverse's sandblast.
         let images = await Self.images(for: badge)
         clock.lap("images \(images.count)")
         let textures = try await StudioResources.textures(images)
         clock.lap("textures")
-        let grit = try await StudioResources.sandblast()
+        let sandblast = try await grit
         clock.lap("grit")
-        let built = await Self.materials(materials, appearance, textures: textures, grit: grit)
+        try Task.checkCancellation()
+        let built = await Self.materials(materials, appearance, textures: textures, grit: sandblast)
         clock.lap("materials \(materials.count)")
-        let environment = try await StudioResources.environment()
+        let made = try await mesh
+        clock.lap("mesh")
+        let lit = try await environment
         clock.lap("environment")
-        return LusterScene(badge: badge, mesh: mesh, materials: materials, built: built,
-                           environment: environment, appearance: appearance,
-                           textures: textures, grit: grit)
+        return LusterScene(badge: badge, mesh: made, materials: materials, built: built,
+                           environment: lit, appearance: appearance,
+                           textures: textures, grit: sandblast)
+    }
+
+    /// The badge's mesh, built off the main actor.
+    @concurrent
+    nonisolated static func mesh(for badge: LusterBadge) async throws -> MeshResource {
+        try await MeshResource(from: descriptors(for: badge))
     }
 
     /// The badge's textures as images, made off the main actor.
@@ -183,6 +194,9 @@ public final class LusterScene {
         let boost = environment["LUSTER_IBL"].flatMap(Float.init) ?? 0
         for (role, light) in lights {
             light.light.intensity = LusterCore.lamp(role: role, lighting: appearance.lighting.core) * lux
+            // A lamp at nothing still costs every pixel its share of the
+            // shading; the showcase has none lit.
+            light.isEnabled = light.light.intensity > 0
         }
 
         if var ibl = imageBasedLight.components[ImageBasedLightComponent.self] {
@@ -196,9 +210,10 @@ public final class LusterScene {
     ///
     /// They must be made on the main thread: `PhysicallyBasedMaterial` loads
     /// engine resources that assert the main queue, although its API is not
-    /// marked `@MainActor`. Each costs about 2 ms (a copy of the prototype and
-    /// its first write), so the work is split into slices with a frame
-    /// between them rather than done in one hitch.
+    /// marked `@MainActor`. A copy costs nothing, but every change to a
+    /// colour or a number in one costs about 2 ms, so each finish, and each
+    /// colour of it, is set once and copied after; what is left is split
+    /// into slices with a frame between them rather than done in one hitch.
     static func materials(_ materials: [LusterCore.Material],
                           _ appearance: LusterAppearance,
                           textures: [TextureResource] = [],
@@ -210,11 +225,17 @@ public final class LusterScene {
                 try? await Task.sleep(for: .milliseconds(4))
                 slice = ContinuousClock.now
             }
-            var pbr = material(m, appearance)
-            // What the document paints on this face, where its colour is not
-            // flat; the material's own colour stands for its sides.
+            // The engine says how each material is finished; only the
+            // metal's colour is this side's.
+            let finish = LusterCore.finish(role: m.role, lighting: appearance.lighting.core)
+            var pbr: PhysicallyBasedMaterial
             if let index = m.texture, Int(index) < textures.count {
+                // What the document paints on this face, where its colour is
+                // not flat. Its tint is the prototype's own white: no change.
+                pbr = finished(finish)
                 pbr.baseColor = .init(tint: .white, texture: .init(textures[Int(index)]))
+            } else {
+                pbr = tinted(finish, finish.plated ? appearance.metal.core : m.color)
             }
             if m.role == .goldBack, let grit {
                 pbr.normal = .init(texture: .init(grit, sampler: StudioResources.repeating))
@@ -231,25 +252,48 @@ public final class LusterScene {
     /// cheap. `prewarm()` makes it before any badge needs it.
     private static let prototype = PhysicallyBasedMaterial()
 
-    /// Makes the shared RealityKit resources ahead of the first badge.
-    static func prewarm() async {
-        _ = prototype
-        _ = try? await StudioResources.environment()
+    /// Each finish, set on a copy of the prototype.
+    private static var finishes: [LusterCore.Finish: PhysicallyBasedMaterial] = [:]
+    /// Each finish in each colour it has been asked for lately.
+    private static var tints: [Tint: PhysicallyBasedMaterial] = [:]
+
+    private struct Tint: Hashable {
+        let finish: LusterCore.Finish
+        let color: LusterCore.Rgba
     }
 
-    /// The engine says how each material is finished; only the metal's
-    /// colour is this side's.
-    private static func material(_ m: LusterCore.Material,
-                                 _ appearance: LusterAppearance) -> PhysicallyBasedMaterial {
-        let finish = LusterCore.finish(role: m.role, lighting: appearance.lighting.core)
+    private static func finished(_ finish: LusterCore.Finish) -> PhysicallyBasedMaterial {
+        if let made = finishes[finish] { return made }
         var pbr = prototype
-        pbr.baseColor = .init(tint: PlatformColor(finish.plated ? appearance.metal.core : m.color))
         pbr.metallic = .init(floatLiteral: finish.metallic)
         pbr.roughness = .init(floatLiteral: finish.roughness)
         // RealityKit's specular is half of glass's reflectance at 0.5, its
         // default; the engine's is a part of glass's.
         pbr.specular = .init(floatLiteral: 0.5 * finish.specular)
+        finishes[finish] = pbr
         return pbr
+    }
+
+    private static func tinted(_ finish: LusterCore.Finish,
+                               _ color: LusterCore.Rgba) -> PhysicallyBasedMaterial {
+        let key = Tint(finish: finish, color: color)
+        if let made = tints[key] { return made }
+        var pbr = finished(finish)
+        pbr.baseColor = .init(tint: PlatformColor(color))
+        // Enough for the badges on screen at once; a long run of them starts
+        // afresh rather than keep every colour it has shown.
+        if tints.count >= 64 { tints.removeAll() }
+        tints[key] = pbr
+        return pbr
+    }
+
+    /// Makes the shared RealityKit resources ahead of the first badge.
+    static func prewarm() async {
+        _ = prototype
+        async let environment = StudioResources.environment()
+        async let grit = StudioResources.sandblast()
+        async let mesh: Void = StudioResources.warmUp()
+        _ = try? await (environment, grit, mesh)
     }
 
     /// Tilt about x, then spin about the badge's own vertical axis: the order
@@ -299,7 +343,7 @@ public final class LusterScene {
 /// The studio's shared resources, made once.
 @MainActor
 enum StudioResources {
-    private static var environment: EnvironmentResource?
+    private static let lighting = Kept(makeEnvironment)
     /// How many texels across each face of the cube the panorama is
     /// reflected from. The showcase's strips are crossed by glossy enamel,
     /// whose sheen has an edge only as sharp as this; at 256 it goes soft.
@@ -326,29 +370,86 @@ enum StudioResources {
         return .init(descriptor)
     }()
 
-    /// The sandblast on a badge's reverse, made once for the process.
-    private static var grit: TextureResource?
+    /// The sandblast on a badge's reverse.
+    private static let grit = Kept(makeSandblast)
+    /// RealityKit's first mesh, which takes it ten times as long as any after.
+    private static let firstMesh = Kept(makeFirstMesh)
 
+    /// None where the engine's pixels would not make an image; asked
+    /// again, it tries again.
     static func sandblast() async throws -> TextureResource? {
-        if let grit { return grit }
-        guard let image = CGImage.srgb(LusterCore.sandblast()) else { return nil }
-        // A normal map is data, not colour: it must not be read as sRGB.
-        let made = try await TextureResource(image: image, options: .init(semantic: .normal))
-        grit = made
-        return made
+        do {
+            return try await grit.value()
+        } catch is Unmade {
+            return nil
+        }
     }
 
     static func environment() async throws -> EnvironmentResource? {
-        if let environment { return environment }
-        guard let image = await Studio.shared.environmentImage() else { return nil }
+        do {
+            return try await lighting.value()
+        } catch is Unmade {
+            return nil
+        }
+    }
+
+    /// The engine's pixels would not make an image.
+    private struct Unmade: Error {}
+
+    /// Builds a single triangle, which takes on the first mesh's cost.
+    static func warmUp() async throws {
+        _ = try await firstMesh.value()
+    }
+
+    private static func makeEnvironment() async throws -> EnvironmentResource {
+        guard let image = await Studio.shared.environmentImage() else { throw Unmade() }
         // The async initializers keep the cube conversion and prefiltering
         // from blocking the main actor.
         let cube = try await TextureResource(cubeFromEquirectangular: image, named: nil,
                                              quality: .normal, faceSize: faceSize,
                                              options: .init(semantic: .color))
-        let made = try await EnvironmentResource(cube: cube, options: .init(samplingQuality: .normal))
-        environment = made
-        return made
+        return try await EnvironmentResource(cube: cube, options: .init(samplingQuality: .normal))
+    }
+
+    private static func makeSandblast() async throws -> TextureResource {
+        guard let image = await Studio.shared.gritImage() else { throw Unmade() }
+        // A normal map is data, not colour: it must not be read as sRGB.
+        return try await TextureResource(image: image, options: .init(semantic: .normal))
+    }
+
+    @concurrent
+    private nonisolated static func makeFirstMesh() async throws -> Bool {
+        var triangle = MeshDescriptor(name: "warm-up")
+        triangle.positions = MeshBuffers.Positions([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+        triangle.normals = MeshBuffers.Normals([[0, 0, 1], [0, 0, 1], [0, 0, 1]])
+        triangle.textureCoordinates = MeshBuffers.TextureCoordinates([[0, 0], [1, 0], [0, 1]])
+        triangle.primitives = .triangles([0, 1, 2])
+        _ = try await MeshResource(from: [triangle])
+        return true
+    }
+}
+
+/// Something made once for the process. Whoever asks while it is being made
+/// waits for it rather than making another; a failure is tried again by the
+/// next to ask.
+@MainActor
+final class Kept<Value: Sendable> {
+    private let make: @MainActor () async throws -> Value
+    private var making: Task<Value, any Error>?
+
+    init(_ make: @escaping @MainActor () async throws -> Value) {
+        self.make = make
+    }
+
+    func value() async throws -> Value {
+        let task = making ?? Task { try await make() }
+        making = task
+        do {
+            return try await task.value
+        } catch {
+            if making == task { making = nil }
+            throw error
+        }
     }
 }
 

@@ -41,8 +41,10 @@ public enum LusterEngine {
     }
 
     /// Starts making the studio's shared resources (the panorama, its lighting
-    /// environment, the material prototype), so the first badge on screen need
-    /// not wait for them. Call it early, e.g. at launch.
+    /// environment, the reverse's grit, the material prototype, RealityKit's
+    /// slow first mesh), so the first badge on screen need not wait for them.
+    /// A view starts them as it starts striking its first badge; calling this
+    /// early, e.g. at launch, has them ready sooner still.
     public static func prewarm() {
         Task { await LusterScene.prewarm() }
     }

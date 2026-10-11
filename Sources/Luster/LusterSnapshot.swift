@@ -20,6 +20,7 @@ public enum LusterSnapshot {
                              pose: SIMD2<Float> = LusterScene.restingPose,
                              pixelSize: Int = 768,
                              background: LusterColor? = nil) async throws -> CGImage {
+        LusterEngine.prewarm()
         let badge = try await LusterEngine.mint(source, options: options)
         return try await image(badge, appearance: appearance, pose: pose, pixelSize: pixelSize,
                                background: background)

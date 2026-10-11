@@ -54,6 +54,9 @@ final class LusterStage {
         self.appearance = appearance
         loaded = (source, options)
         state = .minting
+        // The studio's shared resources are made while the badge is struck,
+        // if the app has not made them already.
+        LusterEngine.prewarm()
         do {
             let badge = try await LusterEngine.mint(source, options: options)
             let scene = try await LusterScene.make(badge, appearance: self.appearance)
