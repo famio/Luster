@@ -80,6 +80,21 @@ import Testing
     #expect(stage.state.badge?.designKey != first.key)
 }
 
+/// Loading the badge already on stage, as a view coming back on screen does,
+/// keeps its scene, and is still a change: the view hears it is ready.
+@MainActor
+@Test func theBadgeOnStageIsKeptWhenItIsLoadedAgain() async throws {
+    let data = try sampleBadge()
+    let stage = LusterStage()
+    await stage.load(.data(data), options: .init(), appearance: .init())
+    let first = (scene: try #require(stage.scene), change: stage.change)
+    await stage.load(.data(data), options: .init(), appearance: .init(metal: .silver))
+    #expect(stage.scene === first.scene)
+    #expect(stage.scene?.appearance == .init(metal: .silver))
+    #expect(stage.change != first.change)
+    #expect(stage.state.badge?.designKey == first.scene.badge.designKey)
+}
+
 /// The placeholder is up while a source has no badge on screen, and is told
 /// of a failure only for the source that failed: a new source after a
 /// failure is still being struck, though its load has not begun.

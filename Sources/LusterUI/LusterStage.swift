@@ -59,6 +59,16 @@ final class LusterStage {
         LusterEngine.prewarm()
         do {
             let badge = try await LusterEngine.mint(source, options: options)
+            // The badge on stage already, as when a view comes back on screen:
+            // kept, rather than built again.
+            if let scene, scene.badge == badge {
+                while scene.appearance != self.appearance {
+                    await scene.apply(self.appearance)
+                }
+                try Task.checkCancellation()
+                state = .ready(badge)
+                return
+            }
             let scene = try await LusterScene.make(badge, appearance: self.appearance)
             // The appearance may have changed while the scene was built.
             while scene.appearance != self.appearance {
