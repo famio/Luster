@@ -94,9 +94,9 @@
     }
   ],
   "glb": {
-    "metal-lines": "0373df0573794086",
-    "plated": "413559e713c83009",
-    "without-hidden-faces": "f6b75d4685d59d5f"
+    "metal-lines": "423f00ea26d5d2b2",
+    "plated": "36f918f7f3235e81",
+    "without-hidden-faces": "8b354c3324f4f60f"
   },
   "hasPainting": true,
   "outline": {
@@ -250,7 +250,7 @@
           0.578561,
           0.116293
         ],
-        "front": 0.0068,
+        "front": 0.006575,
         "name": "cell-4d4d4d.0"
       },
       {
@@ -472,7 +472,7 @@
           0.578561,
           0.116293
         ],
-        "front": 0.0068,
+        "front": 0.006575,
         "name": "cell-4d4d4d.0"
       },
       {

@@ -292,8 +292,9 @@ fn enamel(
     });
     add(pieces, "art", materials.len() as u32 - 1, edge, laid(floor), false);
 
-    // The cells, in paint order as height: cells should not overlap, but where
-    // a sliver does, the later one wins, as in the document.
+    // The fills, in paint order as height: cells should not overlap, but where
+    // a sliver does, the later one wins, as in the document. The lines lie
+    // under them all.
     for (layer, (cell, rings)) in placed.iter().enumerate() {
         cancel.check()?;
         let rings = rings.clone();
@@ -306,8 +307,16 @@ fn enamel(
             roughness: 0.08,
             texture: None,
         });
-        let rise = floor + (1 + layer % CELL_LADDER) as f32 * CELL_STEP;
-        // Lines under the metal are out of sight and keep the cell's average.
+        // A line's enamel is out of sight under its metal, and keeps the
+        // cell's average. It lies half a step over the base enamel, below
+        // every fill: laid higher than a fill beside it, its edge would meet
+        // the metal's wall above that fill and glint there as a thread of the
+        // line's colour.
+        let rise = if cell.is_line {
+            floor + 0.5 * CELL_STEP
+        } else {
+            floor + (1 + layer % CELL_LADDER) as f32 * CELL_STEP
+        };
         let is_painted = art.painting.is_some() && !cell.is_line;
         add(pieces, &name, materials.len() as u32 - 1, &rings, laid(rise), is_painted);
     }
@@ -649,6 +658,35 @@ mod tests {
         }
         let body = struck.pieces.iter().find(|p| p.name == "body.0").unwrap();
         assert!(heights[0] > body.slab.front, "the enamel sits above the plate");
+    }
+
+    /// A line's enamel, out of sight under its metal, lies below every fill:
+    /// where its edge meets the metal's wall, the fill in front of the wall
+    /// hides it. Higher, it would glint on the wall as a thread of its colour.
+    #[test]
+    fn a_line_lies_under_the_fills() {
+        let struck = strike_svg(
+            r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" fill="#466487"/>
+                <path d="M5,50 A45,45 0 0 0 95,50 Z" fill="#193264"/>
+                <circle cx="50" cy="50" r="45" fill="none" stroke="#ffffff" stroke-width="2"/>
+            </svg>"##,
+        );
+        let cells = |painted: bool| -> Vec<f32> {
+            struck
+                .pieces
+                .iter()
+                .filter(|p| p.name.starts_with("cell-") && p.is_painted == painted)
+                .map(|p| p.slab.front)
+                .collect()
+        };
+        let (fills, lines) = (cells(true), cells(false));
+        assert!(!lines.is_empty() && fills.len() >= 2, "{fills:?} {lines:?}");
+        let base = struck.pieces.iter().find(|p| p.name == "art.0").unwrap().slab.front;
+        let lowest = fills.iter().copied().fold(f32::INFINITY, f32::min);
+        for line in lines {
+            assert!(line < lowest && line > base, "a line at {line}, over the base at {base}, under fills at {fills:?}");
+        }
     }
 
     /// Every piece is built with the face it was asked for: what the

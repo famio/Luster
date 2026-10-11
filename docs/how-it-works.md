@@ -68,17 +68,18 @@ centripetal Catmull-Rom fit.
 ## Geometry
 
 A badge is one metal plate with enamel cells laid on it, each a hair higher than the
-last so no two faces are coplanar, sunk below the metal the lines stand in. The metal's
-outline is grown round the art on a raster with an exact Euclidean distance field: a
-hair where the art ends in a fill, which runs on to the edge, and a little more where it
-ends in a visible stroke. A badge is one piece, so where two islands fall short of each
-other the gap is closed with metal: the plate is grown and shrunk back by one and a half
-margins of a 72-pixel canvas, and of what that adds, the parts touching two different
-islands are kept. Gaps up to three margins wide close, ending in fillets, and an
-island's own notches are left alone. The openings in the metal are cut to the cells'
-own paths, and the side is a single wall from reverse to face whose outer edge carries
-the roll: six rings stepped inward, a ring that would fold through itself in a narrow
-notch flattened where it does.
+last so no two faces are coplanar, sunk below the metal the lines stand in. A line's own
+enamel, out of sight under its metal, lies beneath every fill, so the fill in front of a
+wall hides where the line meets it. The metal's outline is grown round the art on a
+raster with an exact Euclidean distance field: a hair where the art ends in a fill,
+which runs on to the edge, and a little more where it ends in a visible stroke. A badge
+is one piece, so where two islands fall short of each other the gap is closed with
+metal: the plate is grown and shrunk back by one and a half margins of a 72-pixel
+canvas, and of what that adds, the parts touching two different islands are kept. Gaps
+up to three margins wide close, ending in fillets, and an island's own notches are left
+alone. The openings in the metal are cut to the cells' own paths, and the side is a
+single wall from reverse to face whose outer edge carries the roll: six rings stepped
+inward, a ring that would fold through itself in a narrow notch flattened where it does.
 
 The plating is a face of its own laid on the metal, cut to what the document paints
 there and read from it, so each line takes its stroke's colours. Shapes cut from one

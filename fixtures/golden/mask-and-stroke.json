@@ -82,9 +82,9 @@
     }
   ],
   "glb": {
-    "metal-lines": "0c5edc831006bb14",
-    "plated": "f09984ff0931e144",
-    "without-hidden-faces": "01a0343f384bdd29"
+    "metal-lines": "eaa41a0bb2fa0288",
+    "plated": "1bbcaa1befbf813a",
+    "without-hidden-faces": "9a8f4ce4fe222803"
   },
   "hasPainting": true,
   "outline": {
@@ -216,7 +216,7 @@
           0.740695,
           0.740695
         ],
-        "front": 0.0068,
+        "front": 0.006575,
         "name": "cell-c58a2b.0"
       },
       {
@@ -361,7 +361,7 @@
           0.740695,
           0.740695
         ],
-        "front": 0.0068,
+        "front": 0.006575,
         "name": "cell-c58a2b.0"
       },
       {

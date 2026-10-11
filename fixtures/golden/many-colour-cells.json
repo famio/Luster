@@ -1386,9 +1386,9 @@
     }
   ],
   "glb": {
-    "metal-lines": "9f5f15eddc1d6c4d",
-    "plated": "933ecb213d79eccd",
-    "without-hidden-faces": "da81c09270ea0155"
+    "metal-lines": "2518c8441a3a55b2",
+    "plated": "7bf4407cc687500e",
+    "without-hidden-faces": "c58382a4f6252cb6"
   },
   "hasPainting": true,
   "outline": {
@@ -2730,7 +2730,7 @@
           0.313916,
           0.132895
         ],
-        "front": 0.0074,
+        "front": 0.006575,
         "name": "cell-38304d.0"
       },
       {
@@ -2741,7 +2741,7 @@
           0.318421,
           0.185526
         ],
-        "front": 0.00755,
+        "front": 0.006575,
         "name": "cell-2a2140.0"
       }
     ],
@@ -4514,7 +4514,7 @@
           0.313916,
           0.132895
         ],
-        "front": 0.0074,
+        "front": 0.006575,
         "name": "cell-38304d.0"
       },
       {
@@ -4525,7 +4525,7 @@
           0.318421,
           0.185526
         ],
-        "front": 0.00755,
+        "front": 0.006575,
         "name": "cell-2a2140.0"
       }
     ]
