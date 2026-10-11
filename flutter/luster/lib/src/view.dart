@@ -99,13 +99,26 @@ class _LusterViewState extends State<LusterView>
     _setUp();
   }
 
+  /// The studio being set up. A badge is struck meanwhile, and waits for it
+  /// only to be shown.
+  Future<void>? studio;
+
   Future<void> _setUp() async {
     try {
       await Luster.init();
       started = true;
-      await stage.setUp(widget.appearance);
+      final appearance = widget.appearance;
+      final studio = this.studio = stage.setUp(appearance);
+      unawaited(_load(widget.source));
+      await studio;
+      // The studio is lit last for the appearance it was given, over one
+      // asked for meanwhile: that one is lit again.
+      if (mounted && widget.appearance != appearance) await stage.light(widget.appearance);
     } catch (e) {
       if (!mounted) return;
+      // The badge being struck will not be shown, and is not to report.
+      generation++;
+      _giveUp();
       final failed = LusterFailed(e);
       setState(() => broken = failed);
       widget.onStateChange?.call(failed);
@@ -113,7 +126,6 @@ class _LusterViewState extends State<LusterView>
     }
     if (!mounted) return;
     setState(() => ready = true);
-    await _load(widget.source);
   }
 
   @override
@@ -173,6 +185,12 @@ class _LusterViewState extends State<LusterView>
     final minting = this.minting = Minting(source, widget.options);
     try {
       final badge = await minting.badge();
+      try {
+        await studio;
+      } catch (_) {
+        // The studio's failure, which `_setUp` reports.
+        return;
+      }
       if (!mounted || mine != generation) return;
       stage.show(badge.engine, widget.appearance);
       setState(() {});
@@ -181,6 +199,12 @@ class _LusterViewState extends State<LusterView>
       // Once it is on screen, get ready to turn it.
       WidgetsBinding.instance.addPostFrameCallback((_) => _prepareToTurn(mine));
     } catch (e) {
+      // A studio that would not set up is the view's failure, told once.
+      try {
+        await studio;
+      } catch (_) {
+        return;
+      }
       // A newer document took over; it reports its own state.
       if (mounted && mine == generation) _report(LusterFailed(e), source);
     }

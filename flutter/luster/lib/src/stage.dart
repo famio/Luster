@@ -76,9 +76,17 @@ class BadgeStage {
   /// studio for [appearance].
   Future<void> setUp(LusterAppearance appearance) async {
     await Luster.init();
-    _gritTexture = await (_grit ??= forgetting(_sandblast(), () => _grit = null));
-    final tone = await (_tone ??= forgetting(_realityKitTone(), () => _tone = null));
-    _shader = await (_badgeShader ??= _BadgeShader.load());
+    // None of these waits on another, the panorama least of all.
+    final grit = _grit ??= forgetting(_sandblast(), () => _grit = null);
+    final toneTable = _tone ??= forgetting(_realityKitTone(), () => _tone = null);
+    final shader = _badgeShader ??= _BadgeShader.load();
+    final studio = _studio();
+    // Every one awaited, so that none fails unheard; the first failure is
+    // the one thrown.
+    await Future.wait([grit, toneTable, shader, studio]);
+    _gritTexture = await grit;
+    final tone = await toneTable;
+    _shader = await shader;
     // flutter_scene's own curves keep a colour's saturation as it
     // brightens, where RealityKit lets it fade towards white, and the
     // pale gold of the Apple side came out orange. With no curve of its
