@@ -44,6 +44,11 @@ installed the Android engine is built from source instead, unless a
 use_precompiled_binaries: true
 ```
 
+Dart reaches the engine through flutter_rust_bridge, held to the one version its
+bindings were generated with: the bridge refuses to start with any other. Another
+package in the app that is built on flutter_rust_bridge has to be on that same
+version, or `flutter pub get` cannot find one to suit both.
+
 ## Use
 
 ```dart

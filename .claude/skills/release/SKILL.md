@@ -32,6 +32,7 @@ description: Luster の新しい版を、Swift Package（GitHub Releases）・Ma
 - 版番号 X を決める（semver。0.x のうちは破壊的変更でマイナーを上げる）。
 - `flutter/luster/CHANGELOG.md` に `## X` の項目を書いてコミットしておく。pub.dev の採点は CHANGELOG にその版があるかを見る。
 - README の Install 欄の版番号は、**公開してから** 上げる（先に書くと、まだ取れない版を案内することになる）。
+- flutter_rust_bridge に新しい版が出ていないか見る（`curl -s https://pub.dev/api/packages/flutter_rust_bridge` の `latest.version`）。frb は版を 1 つに固定していて、利用者のアプリにある他の frb 製パッケージと版が違うと `pub get` が解決できない（`flutter/luster/README.md` の Setup に記載）。新しい版があればユーザーに伝え、上げるならリリースとは別の変更として先に済ませる: `flutter/luster/pubspec.yaml`、`rust/crates/luster-dart/Cargo.toml`（`=X`）、`ci.yml` の `cargo install flutter_rust_bridge_codegen --version`、`flutter_rust_bridge_codegen generate` で生成し直し、example を iOS・macOS・Android で動かして確かめ、CI が通ってからリリースに進む。
 - Rust を変えた版かどうかを把握しておく。変えていなければ Flutter の Android 用のビルド済みエンジンのハッシュは前の版と同じで、`flutter-binaries` はビルドを飛ばす（正常）。
 
 ## 1. dry run
