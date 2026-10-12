@@ -148,6 +148,10 @@ if [ "$DRY" = 1 ]; then
         cp "$KEEP/$file" "$file"
     done
     rm -rf "$KEEP"
+    # cargo still takes its builds of the version put back for fresh, though
+    # the libraries they made now hold this run's version; with the version's
+    # source newer than them, the next build makes them again.
+    touch rust/crates/luster-core/src/lib.rs
     exit 0
 fi
 
