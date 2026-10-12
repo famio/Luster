@@ -3,16 +3,9 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:luster/luster.dart';
-
-/// `--dart-define=LUSTER_CYCLE=true` mints the sample repeatedly and prints the
-/// longest gap between frames on the UI isolate while each mint ran, then
-/// exits. The UI is kept drawing while a mint runs, so a long gap is a hitch.
-const cycle = bool.fromEnvironment('LUSTER_CYCLE');
 
 /// `LUSTER_LIGHTING=off` in the environment opens on the lamps' light, for
 /// photographing the same badge the same way on every platform.
@@ -92,23 +85,10 @@ class _DemoPageState extends State<DemoPage> {
   /// The badge on screen, once it is ready: what the GLB button writes out.
   LusterBadge? badge;
   bool exporting = false;
-  Duration longestFrame = Duration.zero;
-  Duration? lastFrame;
-  bool minting = false;
-  /// Times a mint from the moment it is asked for.
-  final Stopwatch mintWatch = Stopwatch();
 
   @override
   void initState() {
     super.initState();
-    SchedulerBinding.instance.addPersistentFrameCallback((stamp) {
-      final last = lastFrame;
-      if (last != null && stamp - last > longestFrame) longestFrame = stamp - last;
-      lastFrame = stamp;
-      // A badge at rest is not redrawn, so nothing else asks for frames while
-      // a mint runs; asking here keeps them coming.
-      if (minting) SchedulerBinding.instance.scheduleFrame();
-    });
     if (startingUrl.isNotEmpty) {
       final url = Uri.parse(startingUrl);
       svgTitle = url.pathSegments.last.replaceFirst(RegExp(r'\.svg$', caseSensitive: false), '');
@@ -117,31 +97,7 @@ class _DemoPageState extends State<DemoPage> {
     }
     rootBundle.load(sample.asset).then((data) {
       setState(() => svg = data.buffer.asUint8List());
-      if (cycle) _cycle(data.buffer.asUint8List());
     });
-  }
-
-  /// Mints fresh copies of the sample (so nothing is cached) and reports the
-  /// longest frame while each was in flight.
-  Future<void> _cycle(Uint8List base) async {
-    await Future<void>.delayed(const Duration(seconds: 3));
-    debugPrint('round\tmint+scene ms\tlongest frame gap ms');
-    for (var round = 0; round < 6; round++) {
-      final bytes = Uint8List.fromList([...base, ...'<!-- $round -->'.codeUnits]);
-      longestFrame = Duration.zero;
-      final watch = Stopwatch()..start();
-      setState(() => svg = bytes);
-      while (!status.startsWith('ready')) {
-        await Future<void>.delayed(const Duration(milliseconds: 5));
-        if (watch.elapsed > const Duration(seconds: 10)) break;
-      }
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-      debugPrint('$round\t${watch.elapsedMilliseconds}\t'
-          '${(longestFrame.inMicroseconds / 1000).toStringAsFixed(1)}');
-      status = '';
-    }
-    debugPrint('done');
-    exit(0);
   }
 
   /// Puts an SVG the user picks on the badge, under its name.
@@ -187,22 +143,14 @@ class _DemoPageState extends State<DemoPage> {
 
   void _onState(LusterState state) => setState(() {
         badge = null;
-        minting = state is LusterMinting;
         switch (state) {
           case LusterIdle():
             status = 'idle';
           case LusterMinting():
-            longestFrame = Duration.zero;
-            lastFrame = null;
-            mintWatch
-              ..reset()
-              ..start();
             status = 'minting…';
           case LusterReady(:final badge):
             this.badge = badge;
-            status = 'ready ${badge.designKey.substring(0, 6)} · '
-                '${mintWatch.elapsedMilliseconds} ms · longest frame gap '
-                '${longestFrame.inMilliseconds} ms';
+            status = 'ready ${badge.designKey.substring(0, 6)}';
           case LusterFailed(:final error):
             status = 'failed: $error';
         }
