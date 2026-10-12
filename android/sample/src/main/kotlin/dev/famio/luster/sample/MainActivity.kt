@@ -38,7 +38,7 @@ class MainActivity : AppCompatActivity() {
                 val background = Modifier.fillMaxSize().background(if (dark) Color.Black else Color.White)
                 when {
                     launch.bare -> Bare(launch, background)
-                    launch.list -> BadgeList(launch.settings, launch.stills, background)
+                    launch.list -> BadgeList(launch.settings, background, stills = launch.stills)
                     else -> {
                         val context = LocalContext.current
                         val state = remember { DemoState.of(context, launch) }

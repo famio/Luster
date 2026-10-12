@@ -96,7 +96,7 @@ jobs:
       - run: Scripts/build-android.sh
       - name: Generated bindings are up to date
         run: git diff --exit-code android/luster/src/main/kotlin/dev/famio/luster/core
-      - run: ./gradlew :luster:testDebugUnitTest :luster:assembleRelease :luster-compose:assembleRelease :sample:assembleDebug
+      - run: ./gradlew :luster:testDebugUnitTest :luster:assembleRelease :luster-compose:assembleRelease :sample:assembleDebug lint
         working-directory: android
 
   flutter:

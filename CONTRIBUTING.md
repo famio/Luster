@@ -34,11 +34,13 @@ cargo test --manifest-path rust/Cargo.toml   # the engine
 swift test                                   # the Swift package
 Scripts/parity.sh                            # what the engine makes of the fixtures
 Scripts/format.sh --lint                     # the Swift's formatting
+(cd android && ./gradlew lint)               # Android Lint, over the Kotlin and the resources
 ```
 
 The Swift is formatted by swift-format, the one in the toolchain (`swift format`), as
 `.swift-format` says: four spaces. `Scripts/format.sh` rewrites the files; CI fails on
-anything it would change.
+anything it would change. Android Lint takes its warnings for errors; `android/lint.xml`
+leaves out its notices of newer dependencies.
 
 `fixtures/svg` holds the documents the engine is tested on, and `fixtures/golden` what
 it must make of them: the regions it reads, the cells before and after merging, the

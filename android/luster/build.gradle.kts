@@ -27,6 +27,7 @@ android {
     // 16 KB pages: Android 15 devices may use them, and a library that is not
     // aligned will not load there.
     packaging { jniLibs { useLegacyPackaging = false } }
+    lint { warningsAsErrors = true }
 }
 
 mavenPublishing {

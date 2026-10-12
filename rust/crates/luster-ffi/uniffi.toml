@@ -6,3 +6,7 @@ generate_module_map = true
 
 [bindings.kotlin]
 package_name = "dev.famio.luster.core"
+# Frees the engine's objects with Android's SystemCleaner where there is one
+# (API 34) and JNA's below it, rather than java.lang.ref.Cleaner, which is
+# not there below API 33.
+android = true

@@ -280,7 +280,7 @@ private val listed = listOf(
 
 /** Badges in a scrolling list: a drag on one turns it, a swipe beside it scrolls. */
 @Composable
-fun BadgeList(settings: DemoSettings, stills: Boolean = false, modifier: Modifier = Modifier) {
+fun BadgeList(settings: DemoSettings, modifier: Modifier = Modifier, stills: Boolean = false) {
     val context = LocalContext.current
     LazyColumn(modifier.fillMaxSize()) {
         items(listed) { (name, title) ->

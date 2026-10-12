@@ -1,5 +1,6 @@
 package dev.famio.luster
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import kotlinx.coroutines.Dispatchers
@@ -53,7 +54,12 @@ object LusterSnapshot {
         }
     }
 
-    /** The renderer stills are drawn with, made on the main thread with the first. */
+    /**
+     * The renderer stills are drawn with, made on the main thread with the
+     * first. It holds the application's context, which lives as long as the
+     * process does, not an activity's.
+     */
+    @SuppressLint("StaticFieldLeak")
     private var stage: LusterStage? = null
     private val turn = Mutex()
 }

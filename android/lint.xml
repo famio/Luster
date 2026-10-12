@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Android Lint, for every module here. -->
+<lint>
+    <!-- Newer releases of the dependencies and of Gradle are taken when they
+         are wanted, not whenever one comes out. -->
+    <issue id="AndroidGradlePluginVersion" severity="ignore" />
+    <issue id="GradleDependency" severity="ignore" />
+    <issue id="NewerVersionAvailable" severity="ignore" />
+</lint>

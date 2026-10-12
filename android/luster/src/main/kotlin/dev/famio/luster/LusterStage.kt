@@ -467,7 +467,7 @@ class LusterStage(private val context: Context) {
             val options = Texture.PrefilterOptions().apply { mirror = false }
             built.generatePrefilterMipmap(engine, pixels, offsets, options)
         } else {
-            built.setImage(engine, 0, pixels, offsets)
+            built.setImage(engine, 0, 0, 0, 0, size, size, 6, pixels)
         }
         return built
     }

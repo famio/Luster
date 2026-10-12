@@ -24,7 +24,7 @@ data class DemoSettings(
  * The SVG and the GLB are not menus: one has a button that opens a file, the
  * other a button that saves one.
  */
-class DemoMenu(val title: String, @DrawableRes val icon: Int, val items: List<Item>) {
+class DemoMenu(val title: String, @param:DrawableRes val icon: Int, val items: List<Item>) {
     class Item(
         val title: String,
         val isOn: (DemoSettings) -> Boolean,

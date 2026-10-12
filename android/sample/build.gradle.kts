@@ -19,11 +19,16 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     // The same documents the engine is tested on.
-    sourceSets["main"].assets.srcDirs("../../fixtures/svg")
+    sourceSets["main"].assets.directories.add("../../fixtures/svg")
     buildTypes {
         release { isMinifyEnabled = false }
     }
     buildFeatures { compose = true }
+    lint {
+        warningsAsErrors = true
+        // A demo, started from Android Studio or adb, as the iOS one is from Xcode.
+        disable += "MissingApplicationIcon"
+    }
 }
 
 dependencies {
