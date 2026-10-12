@@ -50,6 +50,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - run: Scripts/format.sh --lint
       - run: rustup show active-toolchain || rustup toolchain install
         working-directory: rust
       - run: Scripts/build-xcframework.sh release

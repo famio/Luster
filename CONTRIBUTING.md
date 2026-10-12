@@ -33,7 +33,12 @@ and in the app, add `mavenLocal()` to the repositories and depend on
 cargo test --manifest-path rust/Cargo.toml   # the engine
 swift test                                   # the Swift package
 Scripts/parity.sh                            # what the engine makes of the fixtures
+Scripts/format.sh --lint                     # the Swift's formatting
 ```
+
+The Swift is formatted by swift-format, the one in the toolchain (`swift format`), as
+`.swift-format` says: four spaces. `Scripts/format.sh` rewrites the files; CI fails on
+anything it would change.
 
 `fixtures/svg` holds the documents the engine is tested on, and `fixtures/golden` what
 it must make of them: the regions it reads, the cells before and after merging, the
@@ -107,7 +112,7 @@ LusterShot --tone-table out.bin   # measures RealityKit's tone mapping for the F
 - `flutter/luster` — the Flutter package: `LusterView`, the bindings, and the badge's
   own shader (`shaders/`), which `hook/build.dart` compiles for the app's Flutter SDK
 - `Examples/`, `Apps/`, `Tools/` — the iOS demo, the macOS app, LusterShot
-- `Scripts/` — building the engine, the parity check, releasing
+- `Scripts/` — building the engine, the parity check, formatting, releasing
 
 ## Releasing
 
