@@ -12,7 +12,6 @@ import 'package:logging/logging.dart';
 import 'android_environment.dart';
 import 'build_cmake.dart';
 import 'build_gradle.dart';
-import 'build_pod.dart';
 import 'logging.dart';
 import 'options.dart';
 import 'precompile_binaries.dart';
@@ -35,20 +34,6 @@ abstract class BuildCommand extends Command {
     }
 
     await runBuildCommand(options);
-  }
-}
-
-class BuildPodCommand extends BuildCommand {
-  @override
-  final name = 'build-pod';
-
-  @override
-  final description = 'Build cocoa pod library';
-
-  @override
-  Future<void> runBuildCommand(CargokitUserOptions options) async {
-    final build = BuildPod(userOptions: options);
-    await build.build();
   }
 }
 
@@ -246,7 +231,6 @@ Future<void> runMain(List<String> args) async {
     }
 
     final runner = CommandRunner('build_tool', 'Cargokit built_tool')
-      ..addCommand(BuildPodCommand())
       ..addCommand(BuildGradleCommand())
       ..addCommand(BuildCMakeCommand())
       ..addCommand(GenKeyCommand())

@@ -6,13 +6,16 @@ Building the engine needs Rust (`rust/rust-toolchain.toml` pins the version and 
 targets), and for Android the NDK and `cargo-ndk`.
 
 ```sh
-Scripts/build-xcframework.sh   # iOS, the simulator and macOS; regenerates the Swift bindings
-Scripts/build-android.sh       # arm64-v8a and x86_64; regenerates the Kotlin bindings
+Scripts/build-xcframework.sh           # iOS, the simulator and macOS; regenerates the Swift bindings
+Scripts/build-android.sh               # arm64-v8a and x86_64; regenerates the Kotlin bindings
+Scripts/build-flutter-xcframework.sh   # the Flutter plugin's engine for iOS, the simulator and macOS
 ```
 
 The first leaves the XCFramework `Package.swift` points at; the second leaves the `.so`
-files in `android/luster`. The Flutter package builds the engine itself when the app is
-built, and pins its Flutter version in `flutter/luster/.fvmrc`.
+files in `android/luster`; the third leaves the XCFramework the Flutter plugin's
+`darwin/luster/Package.swift` points at, and has to run again after a change to the
+Rust. On Android the Flutter package builds the engine itself when the app is built.
+It pins its Flutter version in `flutter/luster/.fvmrc`.
 
 To use the Android libraries in an app before they are published, put them in the local
 Maven repository after `Scripts/build-android.sh`:
@@ -117,21 +120,27 @@ Scripts/release.sh 0.2.0             # the same, then commit and tag locally
 
 It sets the version in the engine, the Flutter package and the Android library, builds
 the engine for every platform, runs the tests and the parity check, packs the
-XCFramework and points `Package.swift` at the zip the release will carry — by URL and
+XCFrameworks and points `Package.swift` and the Flutter plugin's
+`darwin/luster/Package.swift` at the zips the release will carry — by URL and
 checksum, so a consumer never needs Rust. It pushes nothing.
 
-After the tag it commits `Package.swift` back to the local XCFramework, so work on the
-branch goes on against the engine built from it.
+After the tag it commits both manifests back to the local XCFrameworks, so work on the
+branch goes on against the engine built from it. That is also why pub.dev is published
+from the tag: only there does the plugin's manifest name the release's zip. Elsewhere
+`publish_to: none` in `flutter/luster/pubspec.yaml` makes `dart pub publish` refuse;
+`release.sh` takes it out for the tag and puts it back after.
 
 When the release is really wanted, from the repository's root:
 
 ```sh
 git push origin HEAD 0.2.0
 gh release create 0.2.0 rust/target/apple/LusterFFI.xcframework.zip \
-  --draft --verify-tag --title "Luster 0.2.0" --generate-notes     # the zip the tag names
+  rust/target/flutter/luster_dart.xcframework.zip \
+  --draft --verify-tag --title "Luster 0.2.0" --generate-notes     # the zips the tag names
 gh workflow run release.yml -f version=0.2.0 -f publish=false   # check
 gh workflow run release.yml -f version=0.2.0 -f publish=true    # publish
-cd flutter/luster && dart pub publish     # pub.dev, by hand, once the workflow is done
+git checkout 0.2.0 && (cd flutter/luster && dart pub publish); git checkout -
+                                          # pub.dev, by hand, once the workflow is done
 Apps/LusterMac/notarize.sh                # the macOS app, signed and notarized
 gh release upload 0.2.0 Apps/LusterMac/.build/Luster-0.2.0-macos.zip
 ```
@@ -141,20 +150,21 @@ notarize it, through a notarytool profile stored once with `xcrun notarytool
 store-credentials luster-notary`. A download that is not notarized will not open on
 macOS 15 until the user overrides it in System Settings.
 
-The zip has to be the one `release.sh` packed: the engine never builds to the same
+The zips have to be the ones `release.sh` packed: the engine never builds to the same
 bytes twice (the XCFramework's slices come out in any order and its archives carry the
-time they were made), so the workflow does not rebuild it. It refuses a tag whose
-`Package.swift` still points at the local XCFramework, checks that the draft's zip has
-the checksum the tag carries, runs the tests linked against that zip, and only then
-takes the draft public. The Android libraries go to Maven Central as
+time they were made), so the workflow does not rebuild them. It refuses a tag whose
+manifests still point at the local XCFrameworks, checks that the draft's zips have the
+checksums the tag carries, runs the tests and builds the Flutter example linked against
+them, and only then takes the draft public. The Android libraries go to Maven Central as
 `dev.famio:luster` and `dev.famio:luster-compose`, once the Apple side has passed,
 signed with the key in the repository's secrets (`SIGNING_KEY`, `SIGNING_PASSWORD`;
 the Central Portal token is `MAVEN_CENTRAL_USERNAME` and `MAVEN_CENTRAL_PASSWORD`).
 A check run signs them too, without uploading.
 
-A Flutter app needs no Rust either. With `publish`, the workflow also builds the
-plugin's engine for every target it runs on, signs it with `CARGOKIT_PRIVATE_KEY` and
-puts it in a `precompiled_<hash>` prerelease. cargokit, in an app's build, works out the
+A Flutter app needs no Rust either. On iOS and macOS the plugin's Swift package
+fetches the release's `luster_dart.xcframework.zip`. For Android, with `publish`, the
+workflow also builds the plugin's engine for every target it runs on, signs it with
+`CARGOKIT_PRIVATE_KEY` and puts it in a `precompiled_<hash>` prerelease. cargokit, in an app's build, works out the
 hash from the package's Rust sources, fetches those files and checks them against the
 public key in `rust/crates/luster-dart/cargokit.yaml`. The hash covers luster-dart,
 luster-core and the workspace's manifest and lock file (the vendored cargokit is changed

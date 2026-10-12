@@ -1,7 +1,7 @@
 #!/bin/bash
 # Prepares a release: sets the version everywhere, builds the engine, packs the
-# XCFramework, points Package.swift at the zip a GitHub release will carry, and
-# tags it.
+# XCFrameworks, points the Swift package and the Flutter plugin's at the zips a
+# GitHub release will carry, and tags it.
 #
 #   Scripts/release.sh 0.2.0            # prepare, commit and tag
 #   Scripts/release.sh 0.2.0 --dry-run  # do everything but commit and tag
@@ -25,22 +25,38 @@ export PATH="/opt/homebrew/opt/rustup/bin:$HOME/.cargo/bin:$PATH"
 REPO="${LUSTER_REPO:-famio/Luster}"
 ZIP="rust/target/apple/LusterFFI.xcframework.zip"
 URL="https://github.com/$REPO/releases/download/$VERSION/LusterFFI.xcframework.zip"
+FLUTTER_MANIFEST="flutter/luster/darwin/luster/Package.swift"
+FLUTTER_ZIP="rust/target/flutter/luster_dart.xcframework.zip"
+FLUTTER_URL="https://github.com/$REPO/releases/download/$VERSION/luster_dart.xcframework.zip"
+# Keeps pub.dev from taking the plugin anywhere but from a tag, whose manifest
+# names the release's zip.
+UNPUBLISHABLE='# Published only from a tag. Here darwin/luster/Package.swift points at the
+# engine a checkout builds, which a published package would not carry;
+# Scripts/release.sh points it at the release'"'"'s zip and takes these lines out.
+publish_to: none
+'
 
 if [ -n "$(git status --porcelain)" ]; then
     echo "the working tree has changes; commit or stash them first" >&2
     exit 1
 fi
-# The commit after the tag puts this manifest back, so it has to be the one
-# that builds against the local engine.
-if ! grep -q 'path: "rust/target/apple/LusterFFI.xcframework"' Package.swift; then
-    echo "Package.swift does not point at the local XCFramework; release from a branch that does" >&2
+# The commit after the tag puts these manifests back, so they have to be the
+# ones that build against the local engine.
+if ! grep -q 'path: "rust/target/apple/LusterFFI.xcframework"' Package.swift ||
+   ! grep -q 'path: "luster_dart.xcframework"' "$FLUTTER_MANIFEST"; then
+    echo "a Package.swift does not point at the local XCFramework; release from a branch that does" >&2
+    exit 1
+fi
+if ! python3 -c 'import sys; sys.exit(sys.argv[1] not in open(sys.argv[2]).read())' \
+        "$UNPUBLISHABLE" flutter/luster/pubspec.yaml; then
+    echo "flutter/luster/pubspec.yaml does not keep pub.dev out; release from a branch that does" >&2
     exit 1
 fi
 
 # The files the version is written into, here or by cargo as it builds. A dry
 # run puts back what it wrote, from copies rather than from git, so nothing
 # else can be caught by it.
-VERSIONED=(Package.swift rust/Cargo.toml rust/Cargo.lock flutter/luster/pubspec.yaml
+VERSIONED=(Package.swift "$FLUTTER_MANIFEST" rust/Cargo.toml rust/Cargo.lock flutter/luster/pubspec.yaml
            flutter/luster/example/pubspec.lock flutter/luster/android/build.gradle
            android/luster/build.gradle.kts android/luster-compose/build.gradle.kts
            android/sample/build.gradle.kts)
@@ -69,6 +85,7 @@ say "version $VERSION"
 
 say "engine"
 Scripts/build-xcframework.sh release
+Scripts/build-flutter-xcframework.sh release
 Scripts/build-android.sh release
 
 say "checks"
@@ -76,30 +93,51 @@ say "checks"
 swift test
 Scripts/parity.sh
 
-say "packing the XCFramework"
-rm -f "$ZIP"
+say "packing the XCFrameworks"
+rm -f "$ZIP" "$FLUTTER_ZIP"
 (cd rust/target/apple && zip -q -r -X "$(basename "$ZIP")" LusterFFI.xcframework)
+# -y keeps the macOS framework's links as links.
+(cd flutter/luster/darwin/luster &&
+    zip -q -r -X -y "$ROOT/$FLUTTER_ZIP" luster_dart.xcframework)
 CHECKSUM="$(swift package compute-checksum "$ZIP")"
+FLUTTER_CHECKSUM="$(swift package compute-checksum "$FLUTTER_ZIP")"
 echo "$CHECKSUM  $ZIP"
+echo "$FLUTTER_CHECKSUM  $FLUTTER_ZIP"
 
-say "pointing Package.swift at the release"
-python3 - "$URL" "$CHECKSUM" <<'PY'
+say "pointing the Package.swift files at the release"
+# The target named by `let <variable>: Target = .binaryTarget(...)` in a
+# manifest becomes the zip at a URL, by its checksum.
+point() {
+    python3 - "$@" <<'PY'
 import re, sys
-url, checksum = sys.argv[1], sys.argv[2]
-p = 'Package.swift'
-s = open(p).read()
-target = '''let ffi: Target = .binaryTarget(
-    name: "LusterFFI",
+manifest, variable, name, url, checksum = sys.argv[1:]
+s = open(manifest).read()
+target = '''let %s: Target = .binaryTarget(
+    name: "%s",
     url: "%s",
     checksum: "%s"
-)''' % (url, checksum)
-s = re.sub(r'let ffi: Target = \.binaryTarget\((?:[^)]*)\)', target, s, count=1)
-open(p, 'w').write(s)
+)''' % (variable, name, url, checksum)
+s, n = re.subn(r'let %s: Target = \.binaryTarget\((?:[^)]*)\)' % variable, target, s, count=1)
+assert n == 1, manifest
+open(manifest, 'w').write(s)
 PY
-# Not `swift build`: the zip is only reachable once the release carries it, so
-# what can be checked here is that the manifest names it and its checksum.
-grep -q "url: \"$URL\"" Package.swift && grep -q "checksum: \"$CHECKSUM\"" Package.swift
-echo "Package.swift names the release's zip and its checksum"
+    # Not `swift build`: the zip is only reachable once the release carries
+    # it, so what can be checked here is that the manifest names it and its
+    # checksum.
+    grep -q "url: \"$4\"" "$1" || exit 1
+    grep -q "checksum: \"$5\"" "$1" || exit 1
+    echo "$1 names the release's zip and its checksum"
+}
+point Package.swift ffi LusterFFI "$URL" "$CHECKSUM"
+point "$FLUTTER_MANIFEST" engine luster_dart "$FLUTTER_URL" "$FLUTTER_CHECKSUM"
+# With the manifest naming the zip, the tag's package may go to pub.dev.
+python3 - "$UNPUBLISHABLE" flutter/luster/pubspec.yaml <<'PY'
+import sys
+block, pubspec = sys.argv[1:]
+s = open(pubspec).read()
+assert s.count(block) == 1, pubspec
+open(pubspec, 'w').write(s.replace(block, ''))
+PY
 
 if [ "$DRY" = 1 ]; then
     say "dry run"
@@ -114,7 +152,7 @@ if [ "$DRY" = 1 ]; then
 fi
 
 say "committing and tagging"
-git add -A Package.swift rust/Cargo.toml rust/Cargo.lock flutter/luster/pubspec.yaml \
+git add -A Package.swift "$FLUTTER_MANIFEST" rust/Cargo.toml rust/Cargo.lock flutter/luster/pubspec.yaml \
     flutter/luster/example/pubspec.lock flutter/luster/android/build.gradle \
     android/luster/build.gradle.kts android/luster-compose/build.gradle.kts \
     android/sample/build.gradle.kts \
@@ -122,27 +160,38 @@ git add -A Package.swift rust/Cargo.toml rust/Cargo.lock flutter/luster/pubspec.
 git commit -m "chore(release): $VERSION"
 git tag -a "$VERSION" -m "Luster $VERSION"
 
-# The tag names the release's zip; work after it goes on against the engine
-# built here, or a change to the Rust would never reach the Swift that uses it.
-say "pointing Package.swift back at the local engine"
+# The tag names the release's zips; work after it goes on against the engine
+# built here, or a change to the Rust would never reach the code that uses it.
+say "pointing the Package.swift files back at the local engine"
 git show "HEAD~1:Package.swift" > Package.swift
-git commit -q -m "chore: build against the local engine again after $VERSION" Package.swift
+git show "HEAD~1:$FLUTTER_MANIFEST" > "$FLUTTER_MANIFEST"
+# The block goes back where it was, after the version.
+python3 - "$UNPUBLISHABLE" flutter/luster/pubspec.yaml <<'PY'
+import re, sys
+block, pubspec = sys.argv[1:]
+s = open(pubspec).read()
+s, n = re.subn(r'^(version: .*\n)', lambda m: m.group(1) + block, s, count=1, flags=re.M)
+assert n == 1, pubspec
+open(pubspec, 'w').write(s)
+PY
+git commit -q -m "chore: build against the local engine again after $VERSION" \
+    Package.swift "$FLUTTER_MANIFEST" flutter/luster/pubspec.yaml
 
 cat <<EOF
 
 Nothing has been pushed or published. When the release is really wanted, from
 the repository's root:
   git push origin HEAD "$VERSION"
-  gh release create "$VERSION" "$ZIP" --draft --verify-tag \\
+  gh release create "$VERSION" "$ZIP" "$FLUTTER_ZIP" --draft --verify-tag \\
     --title "Luster $VERSION" --generate-notes
   gh workflow run release.yml -f version=$VERSION -f publish=true
 
-The zip has to be this one: the engine never builds to the same bytes twice,
-and Package.swift names this one's checksum. Run the workflow with
+The zips have to be these: the engine never builds to the same bytes twice,
+and the Package.swift files name these ones' checksums. Run the workflow with
 publish=false first to check everything without releasing anything; with
 publish=true it takes the draft public. pub.dev and the macOS app come last,
-by hand:
-  cd flutter/luster && dart pub publish
+by hand. pub.dev from the tag, whose Package.swift names the release's zip:
+  git checkout "$VERSION" && (cd flutter/luster && dart pub publish); git checkout -
   Apps/LusterMac/notarize.sh
   gh release upload "$VERSION" "Apps/LusterMac/.build/Luster-$VERSION-macos.zip"
 EOF

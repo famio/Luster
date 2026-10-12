@@ -38,3 +38,6 @@ migrate_working_dir/
 
 # FVM Version Cache
 .fvm/
+
+# The engine Scripts/build-flutter-xcframework.sh builds; a release carries its own.
+/darwin/luster/luster_dart.xcframework/

@@ -23,11 +23,11 @@ abstract final class Luster {
           // Each is kept once it has succeeded: the engine may be loaded only
           // once, so a retry after the shaders failed must not load it again.
           await (_engine ??= _retrying(() => RustLib.init(
-                // On Apple platforms the pod links the engine statically into
-                // the plugin's framework, which the app has already loaded;
-                // elsewhere it is its own shared library, found by name.
+                // On Apple platforms the engine is a framework the plugin's
+                // Swift package embeds in the app; elsewhere it is its own
+                // shared library. Either way it is found by name.
                 externalLibrary: Platform.isIOS || Platform.isMacOS
-                    ? ExternalLibrary.process(iKnowHowToUseIt: true)
+                    ? ExternalLibrary.open('luster_dart.framework/luster_dart')
                     : null,
               ), () => _engine = null));
           await (_scene ??= _retrying(Scene.initializeStaticResources, () => _scene = null));

@@ -32,9 +32,12 @@ the app has to turn on:
 On Android Flutter GPU wants the Vulkan backend. The standard emulator images
 run Impeller on OpenGL ES, where the scene never comes up, so try it on a device.
 
-The engine comes prebuilt for iOS, macOS and Android, and signed: the package
-checks each file against its key before using it, so the app needs no Rust.
-Where `rustup` is installed the engine is built from source instead, unless a
+The engine comes prebuilt, so the app needs no Rust. On iOS and macOS it comes
+through Swift Package Manager, which checks it against the checksum the package
+names; Flutter uses Swift Package Manager by default, and an app that has turned
+it off cannot use the package there. On Android the files are signed: the
+package checks each against its key before using it. Where `rustup` is
+installed the Android engine is built from source instead, unless a
 `cargokit_options.yaml` at the app's root asks for the prebuilt one:
 
 ```yaml

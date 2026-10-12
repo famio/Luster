@@ -9,7 +9,7 @@ license.workspace = true
 publish = false
 
 [lib]
-crate-type = ["cdylib", "staticlib"]
+crate-type = ["cdylib"]
 name = "luster_dart"
 
 [dependencies]

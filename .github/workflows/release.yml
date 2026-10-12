@@ -5,12 +5,13 @@ name: Release
 # `publish` to true.
 #
 # Scripts/release.sh prepares the tag beforehand: it sets the version
-# everywhere, packs the XCFramework and writes its URL and checksum into
-# Package.swift. That zip is attached by hand to a draft release. The engine
-# does not build to the same bytes twice (xcodebuild orders the slices as it
-# likes and the archives carry the time they were made), so rather than build
-# it again this checks the zip the draft carries: that it is the one the tag
-# names, and that the package passes its tests linked against it.
+# everywhere, packs the XCFrameworks and writes their URLs and checksums into
+# Package.swift and the Flutter plugin's. Those zips are attached by hand to a
+# draft release. The engine does not build to the same bytes twice (xcodebuild
+# orders the slices as it likes and the archives carry the time they were
+# made), so rather than build them again this checks the zips the draft
+# carries: that they are the ones the tag names, and that the packages build
+# and pass their tests linked against them.
 on:
   workflow_dispatch:
     inputs:
@@ -39,26 +40,30 @@ jobs:
 
       - name: A tag may not point at a local engine
         run: |
-          if grep -q 'path: "rust/target/apple' Package.swift; then
-            echo "Package.swift still points at the local XCFramework;" \
+          if grep -q 'path: "rust/target/apple' Package.swift ||
+             grep -q 'path: "luster_dart.xcframework"' flutter/luster/darwin/luster/Package.swift; then
+            echo "a Package.swift still points at the local XCFramework;" \
                  "run Scripts/release.sh before tagging" >&2
             exit 1
           fi
 
-      - name: The draft's zip is the one Package.swift was tagged with
+      - name: The draft's zips are the ones the Package.swift files were tagged with
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download "${{ inputs.version }}" \
-            --pattern LusterFFI.xcframework.zip --dir "$RUNNER_TEMP"
-          attached=$(swift package compute-checksum "$RUNNER_TEMP/LusterFFI.xcframework.zip")
-          tagged=$(grep -o 'checksum: "[0-9a-f]*"' Package.swift | cut -d'"' -f2)
-          echo "attached $attached"
-          echo "tagged   $tagged"
-          [ "$attached" = "$tagged" ] || {
-            echo "the release's zip is not the one Package.swift names" >&2
-            exit 1
-          }
+          for pair in LusterFFI:Package.swift luster_dart:flutter/luster/darwin/luster/Package.swift; do
+            zip="${pair%%:*}.xcframework.zip"
+            manifest="${pair#*:}"
+            gh release download "${{ inputs.version }}" --pattern "$zip" --dir "$RUNNER_TEMP"
+            attached=$(swift package compute-checksum "$RUNNER_TEMP/$zip")
+            tagged=$(grep -o 'checksum: "[0-9a-f]*"' "$manifest" | cut -d'"' -f2)
+            echo "$zip attached $attached"
+            echo "$zip tagged   $tagged"
+            [ "$attached" = "$tagged" ] || {
+              echo "the release's $zip is not the one $manifest names" >&2
+              exit 1
+            }
+          done
 
       # The tests run against that zip, unpacked where a checkout's own build
       # would be. The bindings are the ones committed with the tag.
@@ -77,12 +82,6 @@ jobs:
           PY
       - run: swift test
       - run: Scripts/parity.sh
-
-      - name: Publish the release
-        if: ${{ inputs.publish }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release edit "${{ inputs.version }}" --draft=false
 
   android:
     # The AAR is published only once the Apple side has checked out.
@@ -148,27 +147,53 @@ jobs:
               grep -q '^Package has 1 warning\.$' "$RUNNER_TEMP/pub" &&
               grep -q 'dependency on "flutter_rust_bridge" should allow more than one version' "$RUNNER_TEMP/pub"
           }
+      # The example builds against the draft's engine, unpacked where a
+      # checkout's own build would be, as the Swift package's tests do.
+      - name: The example builds against the draft's engine
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "${{ inputs.version }}" \
+            --pattern luster_dart.xcframework.zip --dir "$RUNNER_TEMP"
+          cd flutter/luster/darwin/luster
+          unzip -q "$RUNNER_TEMP/luster_dart.xcframework.zip"
+          python3 - <<'PY'
+          import re
+          p = 'Package.swift'
+          s = open(p).read()
+          s, n = re.subn(r'let engine: Target = \.binaryTarget\((?:[^)]*)\)',
+                         'let engine: Target = .binaryTarget(\n    name: "luster_dart",\n'
+                         '    path: "luster_dart.xcframework"\n)', s, count=1)
+          assert n == 1, p
+          open(p, 'w').write(s)
+          PY
+          # Every slice the zip carries: macOS, the simulator and a device.
+          cd ../../example
+          flutter build macos --debug
+          flutter build ios --simulator --debug
+          flutter build ios --debug --no-codesign
 
-  # The Flutter plugin's engine, built for every target it runs on and signed,
-  # so an app without Rust needs no Rust: cargokit takes the files for the
-  # crate's hash from a precompiled_<hash> prerelease and checks them against
-  # the key in rust/crates/luster-dart/cargokit.yaml. A hash that is already
-  # there is skipped. This runs before `dart pub publish`, which is by hand.
+  # The draft goes public only once both packages have built against its zips.
+  publish:
+    if: ${{ inputs.publish }}
+    needs: [apple, flutter]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "${{ inputs.version }}" --draft=false --repo "${{ github.repository }}"
+
+  # The Flutter plugin's engine for Android, built for every target it runs on
+  # and signed, so an app without Rust needs no Rust: cargokit takes the files
+  # for the crate's hash from a precompiled_<hash> prerelease and checks them
+  # against the key in rust/crates/luster-dart/cargokit.yaml. A hash that is
+  # already there is skipped. This runs before `dart pub publish`, which is by
+  # hand. On iOS and macOS the engine is the release's luster_dart zip instead.
   flutter-binaries:
     if: ${{ inputs.publish }}
-    needs: apple
-    strategy:
-      # One at a time: the first creates the prerelease the second adds to.
-      max-parallel: 1
-      matrix:
-        include:
-          - runner: macos-latest
-            targets: aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios aarch64-apple-darwin x86_64-apple-darwin
-          # An Android debug build asks for i686 too, and one missing target
-          # sends cargokit back to building every one from source.
-          - runner: ubuntu-latest
-            targets: armv7-linux-androideabi aarch64-linux-android i686-linux-android x86_64-linux-android
-    runs-on: ${{ matrix.runner }}
+    needs: publish
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -178,24 +203,22 @@ jobs:
           flutter-version: 3.47.5
       # Flutter's own defaults, the NDK and minimum SDK an app builds with.
       - name: Install the NDK
-        if: runner.os == 'Linux'
         run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358"
       - name: Build, sign and upload
         working-directory: flutter/luster/cargokit/build_tool
         env:
           PRIVATE_KEY: ${{ secrets.CARGOKIT_PRIVATE_KEY }}
           GITHUB_TOKEN: ${{ github.token }}
-          # The podspecs' minimums, for the C that flutter_rust_bridge compiles.
-          MACOSX_DEPLOYMENT_TARGET: "10.15"
-          IPHONEOS_DEPLOYMENT_TARGET: "13.0"
         run: |
           dart pub get
+          # An Android debug build asks for i686 too, and one missing target
+          # sends cargokit back to building every one from source.
           args=""
-          for t in ${{ matrix.targets }}; do args="$args --target=$t"; done
-          if [ "$RUNNER_OS" = Linux ]; then
-            args="$args --android-sdk-location=$ANDROID_HOME"
-            args="$args --android-ndk-version=28.2.13676358 --android-min-sdk-version=24"
-          fi
+          for t in armv7-linux-androideabi aarch64-linux-android i686-linux-android x86_64-linux-android; do
+            args="$args --target=$t"
+          done
+          args="$args --android-sdk-location=$ANDROID_HOME"
+          args="$args --android-ndk-version=28.2.13676358 --android-min-sdk-version=24"
           dart run build_tool precompile-binaries --repository=${{ github.repository }} \
             --manifest-dir=../../rust/crates/luster-dart $args
 
@@ -217,9 +240,8 @@ jobs:
           dart pub get
           dart run build_tool verify-binaries --manifest-dir=../../rust/crates/luster-dart \
             | tee "$RUNNER_TEMP/verify"
-          for t in aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios \
-                   aarch64-apple-darwin x86_64-apple-darwin armv7-linux-androideabi \
-                   aarch64-linux-android i686-linux-android x86_64-linux-android; do
+          for t in armv7-linux-androideabi aarch64-linux-android \
+                   i686-linux-android x86_64-linux-android; do
             grep -Eq "^Checking $t\.\.\. *OK$" "$RUNNER_TEMP/verify" || {
               echo "no signed build for $t" >&2
               exit 1

@@ -116,6 +116,9 @@ jobs:
           # .fvmrc names.
           flutter_rust_bridge_codegen generate
           git diff --exit-code lib/src/rust ../../rust/crates/luster-dart/src/frb_generated.rs
+      # The engine the plugin's Package.swift points at, as a checkout builds
+      # it; only macOS, the one app built here.
+      - run: Scripts/build-flutter-xcframework.sh debug macos
       - name: The example builds, engine and all
         working-directory: flutter/luster/example
         run: flutter build macos --debug
