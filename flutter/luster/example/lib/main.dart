@@ -31,26 +31,26 @@ class DemoApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Luster',
-        theme: _theme(Brightness.light),
-        darkTheme: _theme(Brightness.dark),
-        home: const DemoPage(),
-      );
+    debugShowCheckedModeBanner: false,
+    title: 'Luster',
+    theme: _theme(Brightness.light),
+    darkTheme: _theme(Brightness.dark),
+    home: const DemoPage(),
+  );
 
   static ThemeData _theme(Brightness brightness) => ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.grey,
-          brightness: brightness,
-          dynamicSchemeVariant: DynamicSchemeVariant.monochrome,
-        ),
-        scaffoldBackgroundColor:
-            brightness == Brightness.dark ? Colors.black : Colors.white,
-      );
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: Colors.grey,
+      brightness: brightness,
+      dynamicSchemeVariant: DynamicSchemeVariant.monochrome,
+    ),
+    scaffoldBackgroundColor: brightness == Brightness.dark ? Colors.black : Colors.white,
+  );
 }
 
 /// The choices the menus offer, as the iOS demo names them.
 const lines = [('Plated', false), ('Metal', true)];
+
 /// Each metal is read from the engine when it is used, as the engine may
 /// still be loading while the menus show.
 final metals = <(String, LusterColor? Function())>[
@@ -58,10 +58,7 @@ final metals = <(String, LusterColor? Function())>[
   ('Silver', () => LusterColor.silver),
   ('Copper', () => LusterColor.copper),
 ];
-const lightings = [
-  ('Showcase', LusterLighting.showcase),
-  ('Off', LusterLighting.off),
-];
+const lightings = [('Showcase', LusterLighting.showcase), ('Off', LusterLighting.off)];
 
 class DemoPage extends StatefulWidget {
   const DemoPage({super.key});
@@ -82,6 +79,7 @@ class _DemoPageState extends State<DemoPage> {
     _ => LusterLighting.showcase,
   };
   String status = 'loading';
+
   /// The badge on screen, once it is ready: what the GLB button writes out.
   LusterBadge? badge;
   bool exporting = false;
@@ -103,8 +101,7 @@ class _DemoPageState extends State<DemoPage> {
   /// Puts an SVG the user picks on the badge, under its name.
   Future<void> _open() async {
     try {
-      final file =
-          await FilePicker.pickFile(type: FileType.custom, allowedExtensions: ['svg']);
+      final file = await FilePicker.pickFile(type: FileType.custom, allowedExtensions: ['svg']);
       if (file == null) return;
       final bytes = await file.readAsBytes();
       setState(() {
@@ -142,19 +139,19 @@ class _DemoPageState extends State<DemoPage> {
   }
 
   void _onState(LusterState state) => setState(() {
-        badge = null;
-        switch (state) {
-          case LusterIdle():
-            status = 'idle';
-          case LusterMinting():
-            status = 'minting…';
-          case LusterReady(:final badge):
-            this.badge = badge;
-            status = 'ready ${badge.designKey.substring(0, 6)}';
-          case LusterFailed(:final error):
-            status = 'failed: $error';
-        }
-      });
+    badge = null;
+    switch (state) {
+      case LusterIdle():
+        status = 'idle';
+      case LusterMinting():
+        status = 'minting…';
+      case LusterReady(:final badge):
+        this.badge = badge;
+        status = 'ready ${badge.designKey.substring(0, 6)}';
+      case LusterFailed(:final error):
+        status = 'failed: $error';
+    }
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -260,12 +257,7 @@ class _DemoPageState extends State<DemoPage> {
 
 /// A grey capsule with an icon over a caption, like the iOS demo's buttons.
 class BarButton extends StatelessWidget {
-  const BarButton({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-  });
+  const BarButton({super.key, required this.icon, required this.label, required this.onPressed});
 
   final IconData icon;
   final String label;

@@ -14,8 +14,7 @@ import 'luster.dart';
 import 'rust/api/luster.dart' as rust;
 
 /// The process's environment, where a platform has one.
-final Map<String, String> _environment =
-    kIsWeb ? const {} : io.Platform.environment;
+final Map<String, String> _environment = kIsWeb ? const {} : io.Platform.environment;
 
 /// One submesh on stage: its geometry is kept so that re-plating only swaps
 /// materials.
@@ -69,8 +68,7 @@ class BadgeStage {
   /// `LUSTER_EXPOSURE` in the environment overrides the engine's exposure,
   /// for matching it against the other renderers.
   static double get exposure =>
-      double.tryParse(_environment['LUSTER_EXPOSURE'] ?? '') ??
-      calibration.exposure;
+      double.tryParse(_environment['LUSTER_EXPOSURE'] ?? '') ?? calibration.exposure;
 
   /// Loads the engine and what every badge is drawn with, and lights the
   /// studio for [appearance].
@@ -128,8 +126,7 @@ class BadgeStage {
   static Future<Texture2D> _sandblast() async {
     final t = await rust.sandblast();
     // A normal map is data, not colour.
-    return Texture2D.fromPixels(t.rgba, t.width, t.height,
-        content: TextureContent.normal);
+    return Texture2D.fromPixels(t.rgba, t.width, t.height, content: TextureContent.normal);
   }
 
   /// Lights the studio for [appearance]. False when a later call overtook
@@ -197,10 +194,7 @@ class BadgeStage {
         indices: s.indices,
       );
       final material = badge.materials[s.material];
-      final part = Node(
-        name: s.name,
-        mesh: Mesh(geometry, _material(material, appearance)),
-      );
+      final part = Node(name: s.name, mesh: Mesh(geometry, _material(material, appearance)));
       _parts.add(_Part(part, geometry, material));
       node.add(part);
       for (var i = 0; i < s.positions.length; i += 3) {
@@ -217,9 +211,16 @@ class BadgeStage {
   /// flutter_scene would make, on the UI thread, where a large sheet's holds
   /// up a frame. Sampled as flutter_scene samples its own.
   static TextureSource _upload(rust.Sheet sheet) {
-    final levels = math.min(sheet.levels.length, gpu.Texture.fullMipCount(sheet.width, sheet.height));
-    final texture = gpuContext.createTexture(StorageMode.hostVisible, sheet.width, sheet.height,
-        mipLevelCount: levels);
+    final levels = math.min(
+      sheet.levels.length,
+      gpu.Texture.fullMipCount(sheet.width, sheet.height),
+    );
+    final texture = gpuContext.createTexture(
+      StorageMode.hostVisible,
+      sheet.width,
+      sheet.height,
+      mipLevelCount: levels,
+    );
     for (var level = 0; level < levels; level++) {
       texture.overwrite(ByteData.sublistView(sheet.levels[level]), mipLevel: level);
     }
@@ -251,16 +252,12 @@ class BadgeStage {
     if (shader != null &&
         environment != null &&
         rust.studioLights().every(
-            (light) => rust.lamp(role: light.role, lighting: appearance.lighting.engine) <= 0)) {
+          (light) => rust.lamp(role: light.role, lighting: appearance.lighting.engine) <= 0,
+        )) {
       return _badgeMaterial(shader, environment, m, finish, color, appearance);
     }
     final material = PhysicallyBasedMaterial()
-      ..baseColorFactor = vm.Vector4(
-        _linear(color.r),
-        _linear(color.g),
-        _linear(color.b),
-        1,
-      )
+      ..baseColorFactor = vm.Vector4(_linear(color.r), _linear(color.g), _linear(color.b), 1)
       ..metallicFactor = finish.metallic
       ..roughnessFactor = finish.roughness
       ..specular = finish.specular;
@@ -277,8 +274,14 @@ class BadgeStage {
 
   /// The badge's shader, set up as the standard material would be for the
   /// same finish, colour and textures.
-  ShaderMaterial _badgeMaterial(_BadgeShader shader, EnvironmentMap environment, rust.Material m,
-      rust.Finish finish, rust.Rgba color, LusterAppearance appearance) {
+  ShaderMaterial _badgeMaterial(
+    _BadgeShader shader,
+    EnvironmentMap environment,
+    rust.Material m,
+    rust.Finish finish,
+    rust.Rgba color,
+    LusterAppearance appearance,
+  ) {
     final material = ShaderMaterial(
       fragmentShader: shader.flat,
       radianceCubeFragmentShader: shader.cube,
@@ -302,8 +305,10 @@ class BadgeStage {
       axes[6], axes[7], axes[8], 0, //
       0, 0, 0, 1,
     ]);
-    material.setTexture('base_color_texture',
-        index != null && index < _sheets.length ? _sheets[index] : _BadgeShader.white);
+    material.setTexture(
+      'base_color_texture',
+      index != null && index < _sheets.length ? _sheets[index] : _BadgeShader.white,
+    );
     material.setTexture('normal_texture', normalMap ?? _BadgeShader.white);
     material.setTexture('irradiance_sh', environment.diffuseShTexture);
     return material;
@@ -314,8 +319,7 @@ class BadgeStage {
 
   static Future<ui.Image> _image(rust.Texture t) {
     final done = Completer<ui.Image>();
-    ui.decodeImageFromPixels(
-        t.rgba, t.width, t.height, ui.PixelFormat.rgba8888, done.complete);
+    ui.decodeImageFromPixels(t.rgba, t.width, t.height, ui.PixelFormat.rgba8888, done.complete);
     return done.future;
   }
 
@@ -329,7 +333,8 @@ class BadgeStage {
   void pose(double tilt, double spin) {
     _tilt = tilt;
     _spin = spin;
-    _pivot?.rotation = vm.Quaternion.axisAngle(vm.Vector3(1, 0, 0), -tilt) *
+    _pivot?.rotation =
+        vm.Quaternion.axisAngle(vm.Vector3(1, 0, 0), -tilt) *
         vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), -spin);
   }
 
@@ -354,10 +359,15 @@ class BadgeStage {
     final canvas = ui.Canvas(recorder);
     if (background != null) {
       canvas.drawRect(
-          ui.Offset.zero & size,
-          ui.Paint()
-            ..color = ui.Color.from(
-                alpha: 1, red: background.red, green: background.green, blue: background.blue));
+        ui.Offset.zero & size,
+        ui.Paint()
+          ..color = ui.Color.from(
+            alpha: 1,
+            red: background.red,
+            green: background.green,
+            blue: background.blue,
+          ),
+      );
     }
     scene.render(camera(1), canvas, viewport: ui.Offset.zero & size);
     final picture = recorder.endRecording();
@@ -377,13 +387,17 @@ class _BadgeShader {
 
   /// Where a material has no texture of its own: the standard material's
   /// white.
-  static final Texture2D white =
-      Texture2D.fromPixels(Uint8List.fromList([255, 255, 255, 255]), 1, 1);
+  static final Texture2D white = Texture2D.fromPixels(
+    Uint8List.fromList([255, 255, 255, 255]),
+    1,
+    1,
+  );
 
   static Future<_BadgeShader?> load() async {
     try {
       final library = await gpu.loadShaderLibraryAsync(
-          'packages/luster/shaders/generated/luster.shaderbundle');
+        'packages/luster/shaders/generated/luster.shaderbundle',
+      );
       final flat = library?['BadgeFragment'];
       if (flat == null) return null;
       return _BadgeShader(flat, library!['BadgeCubeFragment']);

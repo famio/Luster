@@ -60,11 +60,11 @@ class LusterView extends StatefulWidget {
   State<LusterView> createState() => _LusterViewState();
 }
 
-class _LusterViewState extends State<LusterView>
-    with SingleTickerProviderStateMixin {
+class _LusterViewState extends State<LusterView> with SingleTickerProviderStateMixin {
   final BadgeStage stage = BadgeStage();
   Scene get scene => stage.scene;
   bool ready = false;
+
   /// Whether the engine is loaded, so that the studio can be asked for.
   bool started = false;
   Minting? minting;
@@ -139,13 +139,18 @@ class _LusterViewState extends State<LusterView>
     if (old.appearance != widget.appearance && started) {
       stage.plate(widget.appearance);
       if (stage.showing) setState(() {});
-      stage.light(widget.appearance).then((lit) {
-        if (lit && mounted) setState(() {});
-      }, onError: (Object e) {
-        // The lighting's failure, not the badge's: the placeholder is not
-        // told.
-        if (mounted) widget.onStateChange?.call(LusterFailed(e));
-      });
+      stage
+          .light(widget.appearance)
+          .then(
+            (lit) {
+              if (lit && mounted) setState(() {});
+            },
+            onError: (Object e) {
+              // The lighting's failure, not the badge's: the placeholder is not
+              // told.
+              if (mounted) widget.onStateChange?.call(LusterFailed(e));
+            },
+          );
     }
   }
 
@@ -235,12 +240,12 @@ class _LusterViewState extends State<LusterView>
   /// What the placeholder is told: the failure of the widget's source and
   /// options, and minting until then, before their mint has begun too.
   LusterState get _placeholderState => switch ((broken, failure)) {
-        (final broken?, _) => broken,
-        (_, (final failed, final source, final options))
-            when source == widget.source && options == widget.options =>
-          failed,
-        _ => const LusterMinting(),
-      };
+    (final broken?, _) => broken,
+    (_, (final failed, final source, final options))
+        when source == widget.source && options == widget.options =>
+      failed,
+    _ => const LusterMinting(),
+  };
 
   /// [view] under the placeholder, if the widget has one. The same with or
   /// without, so that giving the widget one keeps the view.
@@ -367,7 +372,9 @@ class _LusterViewState extends State<LusterView>
     final pixels = _viewSize.width * _viewSize.height * ratio * ratio / 1e6;
     try {
       final cost = await (_gpuCost ??= BadgeStage.forgetting(
-          _measureGpu(camera, _viewSize, ratio, pixels), () => _gpuCost = null));
+        _measureGpu(camera, _viewSize, ratio, pixels),
+        () => _gpuCost = null,
+      ));
       if (!mounted || mine != generation) return;
       // The scale whose pixels fit a frame, as `_pace` would step to.
       final keepsUp = math.sqrt(_slowFrame / (cost * pixels)) * 0.95;
@@ -460,8 +467,9 @@ class _LusterViewState extends State<LusterView>
     // Drawn coarser, it is smoothed after the fact rather than sampled four
     // times over: in motion no one sees the difference, and it is the
     // cheaper of the two.
-    scene.antiAliasingMode =
-        moving && _turningScale < 1 ? AntiAliasingMode.fxaa : AntiAliasingMode.auto;
+    scene.antiAliasingMode = moving && _turningScale < 1
+        ? AntiAliasingMode.fxaa
+        : AntiAliasingMode.auto;
     if (!ready) return _withPlaceholder(context, const SizedBox.expand());
     final view = GestureDetector(
       onPanStart: (_) {
@@ -473,8 +481,10 @@ class _LusterViewState extends State<LusterView>
       },
       onPanUpdate: (d) {
         spin += d.delta.dx * handling.spinPerPoint;
-        tilt = (tilt + d.delta.dy * handling.tiltPerPoint)
-            .clamp(-handling.tiltLimit, handling.tiltLimit);
+        tilt = (tilt + d.delta.dy * handling.tiltPerPoint).clamp(
+          -handling.tiltLimit,
+          handling.tiltLimit,
+        );
         _pose();
       },
       onPanCancel: () => setState(() => dragging = false),

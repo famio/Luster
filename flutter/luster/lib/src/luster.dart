@@ -19,24 +19,27 @@ abstract final class Luster {
   /// before the first badge is wanted. Safe to call more than once; later
   /// calls return the first call's future, unless it failed.
   static Future<void> init() => _ready ??= () async {
-        try {
-          // Each is kept once it has succeeded: the engine may be loaded only
-          // once, so a retry after the shaders failed must not load it again.
-          await (_engine ??= _retrying(() => RustLib.init(
-                // On Apple platforms the engine is a framework the plugin's
-                // Swift package embeds in the app; elsewhere it is its own
-                // shared library. Either way it is found by name.
-                externalLibrary: Platform.isIOS || Platform.isMacOS
-                    ? ExternalLibrary.open('luster_dart.framework/luster_dart')
-                    : null,
-              ), () => _engine = null));
-          await (_scene ??= _retrying(Scene.initializeStaticResources, () => _scene = null));
-        } catch (_) {
-          // A failure is not kept: the next call tries again.
-          _ready = null;
-          rethrow;
-        }
-      }();
+    try {
+      // Each is kept once it has succeeded: the engine may be loaded only
+      // once, so a retry after the shaders failed must not load it again.
+      await (_engine ??= _retrying(
+        () => RustLib.init(
+          // On Apple platforms the engine is a framework the plugin's
+          // Swift package embeds in the app; elsewhere it is its own
+          // shared library. Either way it is found by name.
+          externalLibrary: Platform.isIOS || Platform.isMacOS
+              ? ExternalLibrary.open('luster_dart.framework/luster_dart')
+              : null,
+        ),
+        () => _engine = null,
+      ));
+      await (_scene ??= _retrying(Scene.initializeStaticResources, () => _scene = null));
+    } catch (_) {
+      // A failure is not kept: the next call tries again.
+      _ready = null;
+      rethrow;
+    }
+  }();
 
   static Future<void> _retrying(Future<void> Function() step, void Function() forget) async {
     try {
@@ -63,9 +66,10 @@ abstract final class Luster {
   /// is immediate, and asking for one already being minted waits for that
   /// mint rather than starting another. Fails with a [LusterException] when
   /// the document, its source or the engine fails.
-  static Future<LusterBadge> mint(LusterSource source,
-          {LusterOptions options = const LusterOptions()}) =>
-      Minting(source, options).badge();
+  static Future<LusterBadge> mint(
+    LusterSource source, {
+    LusterOptions options = const LusterOptions(),
+  }) => Minting(source, options).badge();
 }
 
 /// One ask for a badge, which can be given up: what [Luster.mint] and a
@@ -114,13 +118,14 @@ typedef LusterLoader = Future<Uint8List> Function(Uri url);
 
 /// Fetches with `dart:io`'s [HttpClient], which keeps nothing.
 Future<Uint8List> lusterHttpLoader(Uri url) async {
-  final client = HttpClient()
-    ..connectionTimeout = const Duration(seconds: 15);
+  final client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
   try {
     final response = await (await client.getUrl(url)).close();
     if (response.statusCode < 200 || response.statusCode > 299) {
-      throw LusterException(LusterErrorKind.unreadableSource,
-          'could not fetch $url: HTTP ${response.statusCode}');
+      throw LusterException(
+        LusterErrorKind.unreadableSource,
+        'could not fetch $url: HTTP ${response.statusCode}',
+      );
     }
     if (response.contentLength > LusterSource.maximumBytes) {
       throw LusterException.tooLarge(response.contentLength);
@@ -193,7 +198,8 @@ final class LusterSource {
           (other._bytes != null && _bytes != null && _sameBytes(other._bytes, _bytes)));
 
   @override
-  int get hashCode => url?.hashCode ?? Object.hash(_bytes!.length, _bytes.isEmpty ? 0 : _bytes.first);
+  int get hashCode =>
+      url?.hashCode ?? Object.hash(_bytes!.length, _bytes.isEmpty ? 0 : _bytes.first);
 
   @override
   String toString() => url != null ? 'LusterSource($url)' : 'LusterSource(${_bytes!.length} bytes)';
@@ -233,20 +239,19 @@ final class LusterException implements Exception {
   const LusterException(this.kind, this.message);
 
   LusterException.tooLarge(int size)
-      : kind = LusterErrorKind.tooLarge,
-        message = 'the document is $size bytes; at most ${LusterSource.maximumBytes} are read';
+    : kind = LusterErrorKind.tooLarge,
+      message = 'the document is $size bytes; at most ${LusterSource.maximumBytes} are read';
 
   LusterException._engine(rust.LusterError e)
-      : kind = switch (e.kind) {
-          rust.LusterErrorKind.invalidSvg => LusterErrorKind.invalidSvg,
-          rust.LusterErrorKind.inputTooComplex => LusterErrorKind.inputTooComplex,
-          rust.LusterErrorKind.nothingToMint => LusterErrorKind.nothingToMint,
-          // Minting turns the engine's cancellation into MintCancelled.
-          rust.LusterErrorKind.cancelled ||
-          rust.LusterErrorKind.internal =>
-            LusterErrorKind.engineFailure,
-        },
-        message = e.reason;
+    : kind = switch (e.kind) {
+        rust.LusterErrorKind.invalidSvg => LusterErrorKind.invalidSvg,
+        rust.LusterErrorKind.inputTooComplex => LusterErrorKind.inputTooComplex,
+        rust.LusterErrorKind.nothingToMint => LusterErrorKind.nothingToMint,
+        // Minting turns the engine's cancellation into MintCancelled.
+        rust.LusterErrorKind.cancelled ||
+        rust.LusterErrorKind.internal => LusterErrorKind.engineFailure,
+      },
+      message = e.reason;
 
   final LusterErrorKind kind;
 
@@ -302,9 +307,9 @@ enum LusterLighting {
 
   /// The engine's name for it.
   rust.Lighting get engine => switch (this) {
-        showcase => rust.Lighting.showcase,
-        off => rust.Lighting.off,
-      };
+    showcase => rust.Lighting.showcase,
+    off => rust.Lighting.off,
+  };
 }
 
 /// What to strike. Changing any of it mints the badge again.
@@ -312,10 +317,7 @@ enum LusterLighting {
 /// A badge is the art's silhouette in metal, its fills set into it as enamel
 /// that runs on to the edge, recessed below the metal its lines stand in.
 final class LusterOptions {
-  const LusterOptions({
-    this.metalLines = false,
-    this.withoutHiddenFaces = false,
-  });
+  const LusterOptions({this.metalLines = false, this.withoutHiddenFaces = false});
 
   /// Leave out the faces no view can see. Worth it for a badge being sent
   /// somewhere, not for one on screen.
@@ -342,10 +344,7 @@ final class LusterOptions {
 /// How the badge is lit and plated. Changing it re-lights and re-plates; it
 /// never rebuilds.
 final class LusterAppearance {
-  const LusterAppearance({
-    this.metal,
-    this.lighting = LusterLighting.showcase,
-  });
+  const LusterAppearance({this.metal, this.lighting = LusterLighting.showcase});
 
   /// The metal's colour; null takes the engine's pale gold.
   final LusterColor? metal;

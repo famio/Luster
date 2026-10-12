@@ -22,9 +22,7 @@ void main() {
     expect(ready, findsOneWidget);
 
     // The engine answers, and the same document always gives the same key.
-    final svg = (await rootBundle.load('assets/svg/sample-badge.svg'))
-        .buffer
-        .asUint8List();
+    final svg = (await rootBundle.load('assets/svg/sample-badge.svg')).buffer.asUint8List();
     Future<LusterBadge> mint({bool metalLines = false}) =>
         Luster.mint(LusterSource.bytes(svg), options: LusterOptions(metalLines: metalLines));
     final badge = await mint();
@@ -36,8 +34,10 @@ void main() {
 
     // Asked for together, both callers get the badge.
     final other = Uint8List.fromList([...svg, ...'<!-- again -->'.codeUnits]);
-    final both = await Future.wait(
-        [Luster.mint(LusterSource.bytes(other)), Luster.mint(LusterSource.bytes(other))]);
+    final both = await Future.wait([
+      Luster.mint(LusterSource.bytes(other)),
+      Luster.mint(LusterSource.bytes(other)),
+    ]);
     expect(both[1], both[0]);
 
     // The GLB button's bytes: a glTF binary, the same every time for the
@@ -45,8 +45,7 @@ void main() {
     final glb = await badge.glb();
     expect(String.fromCharCodes(glb.sublist(0, 4)), 'glTF');
     expect(await badge.glb(), glb);
-    expect(await badge.glb(metal: LusterColor.silver),
-        isNot(glb));
+    expect(await badge.glb(metal: LusterColor.silver), isNot(glb));
 
     // A still: clear round the badge unless given a background, covered in
     // the middle, as the view shows it.
@@ -58,32 +57,38 @@ void main() {
     final clear = await pixels(still);
     expect(alpha(clear, 0, 0), 0);
     expect(alpha(clear, 128, 128), 255);
-    final card = await pixels(await LusterSnapshot.image(badge,
-        pixelSize: 256, background: const LusterColor(1, 1, 1)));
+    final card = await pixels(
+      await LusterSnapshot.image(badge, pixelSize: 256, background: const LusterColor(1, 1, 1)),
+    );
     expect(alpha(card, 0, 0), 255);
     expect(card.getUint8(0), 255);
     // `--dart-define=LUSTER_STILL=<path>` keeps one, to look at.
     const shot = String.fromEnvironment('LUSTER_STILL');
     if (shot.isNotEmpty) {
-      final png = await (await LusterSnapshot.fromSource(LusterSource.bytes(svg), pixelSize: 768))
-          .toByteData(format: ui.ImageByteFormat.png);
+      final png = await (await LusterSnapshot.fromSource(
+        LusterSource.bytes(svg),
+        pixelSize: 768,
+      )).toByteData(format: ui.ImageByteFormat.png);
       File(shot).writeAsBytesSync(png!.buffer.asUint8List());
     }
 
     // A web source goes through the loader the app sets.
     final previous = Luster.loader;
-    Luster.loader = (url) async => url.path == '/badge.svg'
-        ? svg
-        : throw const HttpException('not found');
+    Luster.loader = (url) async =>
+        url.path == '/badge.svg' ? svg : throw const HttpException('not found');
     try {
-      final fetched = await Luster.mint(LusterSource.url(Uri.parse('https://luster.test/badge.svg')));
+      final fetched = await Luster.mint(
+        LusterSource.url(Uri.parse('https://luster.test/badge.svg')),
+      );
       expect(fetched, badge);
-      await expectLater(Luster.mint(LusterSource.url(Uri.parse('https://luster.test/missing.svg'))),
-          throwsA(isA<LusterException>()
-              .having((e) => e.kind, 'kind', LusterErrorKind.unreadableSource)));
+      await expectLater(
+        Luster.mint(LusterSource.url(Uri.parse('https://luster.test/missing.svg'))),
+        throwsA(
+          isA<LusterException>().having((e) => e.kind, 'kind', LusterErrorKind.unreadableSource),
+        ),
+      );
     } finally {
       Luster.loader = previous;
     }
-
   });
 }

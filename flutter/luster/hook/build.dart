@@ -11,7 +11,8 @@ import 'package:hooks/hooks.dart';
 void main(List<String> args) async {
   await build(args, (input, output) async {
     final scene = await Isolate.resolvePackageUri(
-        Uri.parse('package:flutter_scene/build_hooks.dart'));
+      Uri.parse('package:flutter_scene/build_hooks.dart'),
+    );
     if (scene == null) {
       throw Exception('luster: could not find the flutter_scene package.');
     }
@@ -19,19 +20,13 @@ void main(List<String> args) async {
       buildInput: input,
       buildOutput: output,
       manifestFileName: 'shaders/luster.shaderbundle.json',
-      includeDirectories: [
-        scene.resolve('../shaders/'),
-        input.packageRoot.resolve('shaders/'),
-      ],
+      includeDirectories: [scene.resolve('../shaders/'), input.packageRoot.resolve('shaders/')],
       // dFdx and texelFetch, as flutter_scene's own shaders.
       glesLanguageVersion: 300,
     );
     // The bundle lands in build/, which a published package leaves out; the
     // pubspec lists a directory that ships instead, and this fills it.
-    File.fromUri(input.packageRoot
-            .resolve('build/shaderbundles/luster.shaderbundle'))
-        .copySync(input.packageRoot
-            .resolve('shaders/generated/luster.shaderbundle')
-            .toFilePath());
+    File.fromUri(input.packageRoot.resolve('build/shaderbundles/luster.shaderbundle'))
+        .copySync(input.packageRoot.resolve('shaders/generated/luster.shaderbundle').toFilePath());
   });
 }

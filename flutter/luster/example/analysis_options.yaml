@@ -7,3 +7,7 @@ analyzer:
     - macos/**
     - linux/**
 include: package:flutter_lints/flutter.yaml
+
+# dart format, as Scripts/format.sh runs it.
+formatter:
+  page_width: 100

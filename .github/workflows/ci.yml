@@ -50,7 +50,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - run: Scripts/format.sh --lint
+      - run: Scripts/format.sh --lint swift
       - run: rustup show active-toolchain || rustup toolchain install
         working-directory: rust
       - run: Scripts/build-xcframework.sh release
@@ -109,6 +109,7 @@ jobs:
         with:
           # What flutter/luster/.fvmrc pins.
           flutter-version: 3.47.5
+      - run: Scripts/format.sh --lint dart
       - run: cargo install flutter_rust_bridge_codegen --version 2.13.0 --locked
       - name: Generated bindings are up to date
         working-directory: flutter/luster

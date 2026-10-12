@@ -38,8 +38,12 @@ abstract final class LusterSnapshot {
     double? spin,
     int pixelSize = 768,
     LusterColor? background,
-  }) async =>
-      image(await Luster.mint(source, options: options),
-          appearance: appearance, tilt: tilt, spin: spin, pixelSize: pixelSize,
-          background: background);
+  }) async => image(
+    await Luster.mint(source, options: options),
+    appearance: appearance,
+    tilt: tilt,
+    spin: spin,
+    pixelSize: pixelSize,
+    background: background,
+  );
 }
