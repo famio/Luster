@@ -41,7 +41,7 @@ fi
 # run puts back what it wrote, from copies rather than from git, so nothing
 # else can be caught by it.
 VERSIONED=(Package.swift rust/Cargo.toml rust/Cargo.lock flutter/luster/pubspec.yaml
-           flutter/luster/android/build.gradle
+           flutter/luster/example/pubspec.lock flutter/luster/android/build.gradle
            android/luster/build.gradle.kts android/luster-compose/build.gradle.kts
            android/sample/build.gradle.kts)
 KEEP="$(mktemp -d)"
@@ -58,6 +58,10 @@ say "version $VERSION"
 # The engine's version is the package's; the bindings report it.
 /usr/bin/sed -i '' "s/^version = \".*\"/version = \"$VERSION\"/" rust/Cargo.toml
 /usr/bin/sed -i '' "s/^version: .*/version: $VERSION/" flutter/luster/pubspec.yaml
+# The example's lock names the version of the package it is built on, as pub
+# would write it on its next run.
+/usr/bin/sed -i '' "/^  luster:\$/,/^    version:/ s/^    version: \".*\"/    version: \"$VERSION\"/" \
+    flutter/luster/example/pubspec.lock
 /usr/bin/sed -i '' "s/^\( *versionName = \).*/\1\"$VERSION\"/" android/sample/build.gradle.kts
 /usr/bin/sed -i '' "s/^\( *version = \).*/\1\"$VERSION\"/" android/luster/build.gradle.kts 2>/dev/null || true
 /usr/bin/sed -i '' "s/^\( *version = \).*/\1\"$VERSION\"/" android/luster-compose/build.gradle.kts 2>/dev/null || true
@@ -111,7 +115,7 @@ fi
 
 say "committing and tagging"
 git add -A Package.swift rust/Cargo.toml rust/Cargo.lock flutter/luster/pubspec.yaml \
-    flutter/luster/android/build.gradle \
+    flutter/luster/example/pubspec.lock flutter/luster/android/build.gradle \
     android/luster/build.gradle.kts android/luster-compose/build.gradle.kts \
     android/sample/build.gradle.kts \
     Sources/LusterCore/Generated android/luster/src/main/kotlin/dev/famio/luster/core
