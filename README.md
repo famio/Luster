@@ -182,7 +182,8 @@ platform:
 are `URLSession.shared`, which `URLCache` caches as the server's headers allow;
 `HttpURLConnection`, which caches nothing unless the app installs an
 `HttpResponseCache`; and `dart:io`'s `HttpClient`, which caches nothing. On Android the
-app needs the `INTERNET` permission.
+app needs the `INTERNET` permission, and a sandboxed macOS app the
+`com.apple.security.network.client` entitlement.
 
 To share the cache an app already uses for images, set your own loader:
 

@@ -14,10 +14,11 @@ same document gives the same badge, to the byte, on every platform.
 
 ## Setup
 
-The widget draws with Flutter GPU, which the app has to turn on:
+Luster needs Flutter 3.47.1 or later. The widget draws with Flutter GPU, which
+the app has to turn on:
 
 ```xml
-<!-- ios/Runner/Info.plist -->
+<!-- ios/Runner/Info.plist, and macos/Runner/Info.plist -->
 <key>FLTEnableFlutterGPU</key>
 <true/>
 ```
@@ -121,9 +122,11 @@ badge and metal, so two exports can be compared directly.
 ### From the web
 
 A web source is fetched with `Luster.loader`, by default `dart:io`'s `HttpClient`,
-which keeps nothing; documents over 20 MB are refused, and on Android the app needs
-the `INTERNET` permission. To fetch through
-flutter_cache_manager, as cached_network_image does:
+which keeps nothing; documents over 20 MB are refused. On Android the app needs the
+`INTERNET` permission, and on macOS the `com.apple.security.network.client`
+entitlement, in `DebugProfile.entitlements` and `Release.entitlements`.
+
+To fetch through flutter_cache_manager, as cached_network_image does:
 
 ```dart
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
@@ -133,9 +136,9 @@ Luster.loader = (url) async =>
 ```
 
 A source that cannot be fetched fails with a `LusterException` whose `kind` is
-`unreadableSource` (`tooLarge` past the limit). Whatever the
-loader, the engine keeps recent badges by the document's bytes, so a document
-fetched again is not struck again.
+`unreadableSource` (`tooLarge` past the limit). Whatever the loader, the engine
+keeps recent badges by the document's bytes, so a document fetched again is not
+struck again.
 
 ## How it is drawn
 
@@ -153,8 +156,6 @@ when something changes. Under the showcase it is drawn with its own shader
 standard image-based lighting and nothing else, several times cheaper a pixel
 than the standard material. On a GPU too slow for full resolution the widget
 starts each turn coarser and comes down further while frames come too slowly.
-
-The package pins the Flutter version it is built against in `.fvmrc`.
 
 ## License
 
