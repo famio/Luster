@@ -48,7 +48,16 @@ for language in $LANGUAGES; do
                 -e '/cargokit/' -e '^flutter/luster/lib/src/rust/')
             # The SDK .fvmrc pins, where fvm is; CI puts that one on the path.
             DART=(dart)
-            command -v fvm > /dev/null && DART=(fvm dart)
+            FLUTTER=(flutter)
+            command -v fvm > /dev/null && DART=(fvm dart) && FLUTTER=(fvm flutter)
+            # The page width is in analysis_options.yaml, whose include names a
+            # package: unresolved, dart format leaves the file out, width and
+            # all, and formats to 80 columns. Getting the plugin's packages
+            # gets the example's too.
+            if [ ! -f flutter/luster/.dart_tool/package_config.json ] ||
+               [ ! -f flutter/luster/example/.dart_tool/package_config.json ]; then
+                (cd flutter/luster && "${FLUTTER[@]}" pub get > /dev/null)
+            fi
             if [ "$LINT" = 1 ]; then
                 (cd flutter/luster &&
                     "${DART[@]}" format --output=none --set-exit-if-changed "${FILES[@]#flutter/luster/}")
