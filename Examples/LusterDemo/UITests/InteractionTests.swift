@@ -3,8 +3,8 @@ import XCTest
 /// Drives the demo like a user: drag the badge, flick it, switch to the tab
 /// that draws it with UIKit. Screenshots are attached to the result bundle,
 /// and written to $LUSTER_SHOTS as well when that is set and reachable.
+@MainActor
 final class InteractionTests: XCTestCase {
-    @MainActor
     func testDragTurnsTheBadgeAndTheUIKitTabShowsOne() throws {
         let app = XCUIApplication()
         app.launch()
@@ -39,7 +39,6 @@ final class InteractionTests: XCTestCase {
     /// The demo opens on Namiura with a button for another SVG and the three
     /// menus; picking from one shows on its button, and the tabs, which only
     /// change the view that draws the badge, keep what was picked.
-    @MainActor
     func testTheTabsShareTheMenusAndWhatIsPicked() throws {
         let app = XCUIApplication()
         app.launch()
@@ -83,7 +82,6 @@ final class InteractionTests: XCTestCase {
 
     /// On either tab, the GLB button offers to save the badge once it is
     /// ready, and swiping the save sheet away saves nothing.
-    @MainActor
     func testBothTabsOfferToSaveAGLB() throws {
         let app = XCUIApplication()
         app.launch()

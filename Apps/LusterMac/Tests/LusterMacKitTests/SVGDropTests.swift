@@ -81,7 +81,6 @@ final class SVGDropTests: XCTestCase {
     func testUnusableDropIsRejected() throws {
         let provider = NSItemProvider(object: "just text" as NSString)
         let outcome = try result(of: [provider], accepted: false)
-        XCTAssertEqual(try? outcome.get() != nil, nil)
         guard case let .failure(failure) = outcome else {
             return XCTFail("plain text is not a drop this app can use")
         }
