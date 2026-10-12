@@ -15,12 +15,12 @@ struct Sample: Identifiable, Hashable {
 
     /// The fixtures `-cycle` mints, in order, and what each is for.
     private static let showcase: [(name: String, title: String)] = [
-        ("namiura", "Namiura"),                // an illustration: fine curls, wires on top
-        ("sample-badge", "Seal"),              // solid fills: the plain case
-        ("pin-with-stroke", "Pin"),            // line work and pieces apart
-        ("fuji", "Fuji"),                      // layered fills, wires on top
-        ("many-colour-cells", "Colour wheel"), // thirty colours under a glaze
-        ("wreathed-emblem", "Wreath"),         // many small pieces, fine lines
+        ("namiura", "Namiura"),  // an illustration: fine curls, wires on top
+        ("sample-badge", "Seal"),  // solid fills: the plain case
+        ("pin-with-stroke", "Pin"),  // line work and pieces apart
+        ("fuji", "Fuji"),  // layered fills, wires on top
+        ("many-colour-cells", "Colour wheel"),  // thirty colours under a glaze
+        ("wreathed-emblem", "Wreath"),  // many small pieces, fine lines
     ]
 
     /// What `-cycle` mints: the showcase.
@@ -34,7 +34,8 @@ struct Sample: Identifiable, Hashable {
 
     private static func files(in folder: String) -> [URL] {
         guard let dir = Bundle.main.url(forResource: folder, withExtension: nil),
-              let files = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)
+            let files = try? FileManager.default.contentsOfDirectory(
+                at: dir, includingPropertiesForKeys: nil)
         else { return [] }
         return files.filter { $0.pathExtension == "svg" }
             .sorted { $0.lastPathComponent < $1.lastPathComponent }

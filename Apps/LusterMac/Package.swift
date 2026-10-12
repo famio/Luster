@@ -5,7 +5,7 @@ let package = Package(
     name: "LusterMac",
     platforms: [.macOS(.v15)],
     products: [
-        .executable(name: "Luster", targets: ["LusterApp"]),
+        .executable(name: "Luster", targets: ["LusterApp"])
     ],
     dependencies: [.package(path: "../..")],
     targets: [

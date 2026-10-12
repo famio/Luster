@@ -23,8 +23,9 @@ struct ContentView: View {
         .focusEffectDisabled()
         .frame(minWidth: 900, minHeight: 600)
         .alert(item: $model.alert) { alert in
-            Alert(title: Text(alert.title), message: Text(alert.message),
-                  dismissButton: .cancel(Text("OK")))
+            Alert(
+                title: Text(alert.title), message: Text(alert.message),
+                dismissButton: .cancel(Text("OK")))
         }
     }
 
@@ -45,12 +46,14 @@ struct ContentView: View {
 
     private var stage: some View {
         ZStack {
-            LusterView(source: model.svgData.map { .data($0) },
-                           options: model.options,
-                           appearance: model.appearance) { state in
+            LusterView(
+                source: model.svgData.map { .data($0) },
+                options: model.options,
+                appearance: model.appearance
+            ) { state in
                 switch state {
-                case let .ready(badge): model.badge = badge
-                case let .failed(error): model.report(error)
+                case .ready(let badge): model.badge = badge
+                case .failed(let error): model.report(error)
                 case .idle, .minting: break
                 }
             }
@@ -77,7 +80,7 @@ struct ContentView: View {
                     }
                     .controlSize(.large)
                     .padding(.trailing, 20)
-                        .padding(.bottom, 16)
+                    .padding(.bottom, 16)
                 }
             }
             .allowsHitTesting(true)
@@ -95,8 +98,10 @@ struct ContentView: View {
         ZStack {
             Palette.dropVeil
             RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(Palette.accent.opacity(0.55),
-                              style: StrokeStyle(lineWidth: 1, dash: [6, 5]))
+                .strokeBorder(
+                    Palette.accent.opacity(0.55),
+                    style: StrokeStyle(lineWidth: 1, dash: [6, 5])
+                )
                 .frame(width: 210, height: 210)
                 .overlay {
                     Text("Drop an SVG")

@@ -10,8 +10,9 @@ package struct LusterHandling: Sendable {
 
     package static let standard: LusterHandling = {
         let h = LusterCore.handling()
-        return LusterHandling(spinPerPoint: h.spinPerPoint, tiltPerPoint: h.tiltPerPoint,
-                              tiltLimit: h.tiltLimit)
+        return LusterHandling(
+            spinPerPoint: h.spinPerPoint, tiltPerPoint: h.tiltPerPoint,
+            tiltLimit: h.tiltLimit)
     }()
 
     /// Carries a flick's spin (radians per second) over `dt` seconds: how far

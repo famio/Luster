@@ -1,6 +1,7 @@
 import Foundation
 internal import LusterCore
 import RealityKit
+
 #if canImport(UIKit)
 import UIKit
 typealias PlatformColor = UIColor
@@ -28,9 +29,10 @@ struct Stopwatch {
             let d = now - then
             return Double(d.components.seconds) * 1000 + Double(d.components.attoseconds) / 1e15
         }
-        let line = String(format: "  %@%@%6.0f ms (%6.0f)\n", stage,
-                          String(repeating: " ", count: max(1, 16 - stage.count)),
-                          since(last.at), since(start))
+        let line = String(
+            format: "  %@%@%6.0f ms (%6.0f)\n", stage,
+            String(repeating: " ", count: max(1, 16 - stage.count)),
+            since(last.at), since(start))
         FileHandle.standardError.write(Data(line.utf8))
         last.at = now
     }
@@ -77,11 +79,14 @@ public final class LusterScene {
 
     private func frame() {
         camera.camera.fieldOfViewOrientation = .vertical
-        camera.camera.fieldOfViewInDegrees = LusterCore.fieldOfView(width: size.x, height: size.y,
-                                                                    aspect: aspectRatio)
+        camera.camera.fieldOfViewInDegrees = LusterCore.fieldOfView(
+            width: size.x, height: size.y,
+            aspect: aspectRatio)
     }
 
-    public static func make(_ badge: LusterBadge, appearance: LusterAppearance) async throws -> LusterScene {
+    public static func make(_ badge: LusterBadge, appearance: LusterAppearance) async throws
+        -> LusterScene
+    {
         let clock = Stopwatch()
         // None of these waits on another: the mesh is built off the main
         // actor while the materials are made on it, and the studio's shared
@@ -104,9 +109,10 @@ public final class LusterScene {
         clock.lap("mesh")
         let lit = try await environment
         clock.lap("environment")
-        return LusterScene(badge: badge, mesh: made, materials: materials, built: built,
-                           environment: lit, appearance: appearance,
-                           textures: textures, grit: sandblast)
+        return LusterScene(
+            badge: badge, mesh: made, materials: materials, built: built,
+            environment: lit, appearance: appearance,
+            textures: textures, grit: sandblast)
     }
 
     /// The badge's mesh, built off the main actor.
@@ -121,10 +127,12 @@ public final class LusterScene {
         badge.core.textures().compactMap(CGImage.srgb)
     }
 
-    private init(badge: LusterBadge, mesh: MeshResource, materials: [LusterCore.Material],
-                 built: [PhysicallyBasedMaterial], environment: EnvironmentResource?,
-                 appearance: LusterAppearance, textures: [TextureResource] = [],
-                 grit: TextureResource? = nil) {
+    private init(
+        badge: LusterBadge, mesh: MeshResource, materials: [LusterCore.Material],
+        built: [PhysicallyBasedMaterial], environment: EnvironmentResource?,
+        appearance: LusterAppearance, textures: [TextureResource] = [],
+        grit: TextureResource? = nil
+    ) {
         self.textures = textures
         self.grit = grit
         self.badge = badge
@@ -193,7 +201,8 @@ public final class LusterScene {
         let lux = environment["LUSTER_LUX"].flatMap(Float.init) ?? preset.lux
         let boost = environment["LUSTER_IBL"].flatMap(Float.init) ?? 0
         for (role, light) in lights {
-            light.light.intensity = LusterCore.lamp(role: role, lighting: appearance.lighting.core) * lux
+            light.light.intensity =
+                LusterCore.lamp(role: role, lighting: appearance.lighting.core) * lux
             // A lamp at nothing still costs every pixel its share of the
             // shading; the showcase has none lit.
             light.isEnabled = light.light.intensity > 0
@@ -214,10 +223,12 @@ public final class LusterScene {
     /// colour or a number in one costs about 2 ms, so each finish, and each
     /// colour of it, is set once and copied after; what is left is split
     /// into slices with a frame between them rather than done in one hitch.
-    static func materials(_ materials: [LusterCore.Material],
-                          _ appearance: LusterAppearance,
-                          textures: [TextureResource] = [],
-                          grit: TextureResource? = nil) async -> [PhysicallyBasedMaterial] {
+    static func materials(
+        _ materials: [LusterCore.Material],
+        _ appearance: LusterAppearance,
+        textures: [TextureResource] = [],
+        grit: TextureResource? = nil
+    ) async -> [PhysicallyBasedMaterial] {
         var built: [PhysicallyBasedMaterial] = []
         var slice = ContinuousClock.now
         for m in materials {
@@ -274,8 +285,10 @@ public final class LusterScene {
         return pbr
     }
 
-    private static func tinted(_ finish: LusterCore.Finish,
-                               _ color: LusterCore.Rgba) -> PhysicallyBasedMaterial {
+    private static func tinted(
+        _ finish: LusterCore.Finish,
+        _ color: LusterCore.Rgba
+    ) -> PhysicallyBasedMaterial {
         let key = Tint(finish: finish, color: color)
         if let made = tints[key] { return made }
         var pbr = finished(finish)
@@ -310,12 +323,16 @@ public final class LusterScene {
         let (position, normal, uv) = (Int(layout.position), Int(layout.normal), Int(layout.uv))
         return badge.core.submeshes().map { submesh in
             let count = Int(submesh.vertexCount)
-            var positions = [SIMD3<Float>](), normals = [SIMD3<Float>](), uvs = [SIMD2<Float>]()
+            var positions = [SIMD3<Float>]()
+            var normals = [SIMD3<Float>]()
+            var uvs = [SIMD2<Float>]()
             positions.reserveCapacity(count)
             normals.reserveCapacity(count)
             uvs.reserveCapacity(count)
             submesh.vertices.withUnsafeBytes { raw in
-                func f(_ offset: Int) -> Float { raw.loadUnaligned(fromByteOffset: offset, as: Float.self) }
+                func f(_ offset: Int) -> Float {
+                    raw.loadUnaligned(fromByteOffset: offset, as: Float.self)
+                }
                 for i in 0..<count {
                     let o = i * stride
                     positions.append([f(o + position), f(o + position + 4), f(o + position + 8)])
@@ -405,9 +422,10 @@ enum StudioResources {
         guard let image = await Studio.shared.environmentImage() else { throw Unmade() }
         // The async initializers keep the cube conversion and prefiltering
         // from blocking the main actor.
-        let cube = try await TextureResource(cubeFromEquirectangular: image, named: nil,
-                                             quality: .normal, faceSize: faceSize,
-                                             options: .init(semantic: .color))
+        let cube = try await TextureResource(
+            cubeFromEquirectangular: image, named: nil,
+            quality: .normal, faceSize: faceSize,
+            options: .init(semantic: .color))
         return try await EnvironmentResource(cube: cube, options: .init(samplingQuality: .normal))
     }
 
@@ -456,9 +474,11 @@ final class Kept<Value: Sendable> {
 extension PlatformColor {
     convenience init(_ c: LusterCore.Rgba) {
         #if canImport(UIKit)
-        self.init(red: CGFloat(c.r), green: CGFloat(c.g), blue: CGFloat(c.b), alpha: CGFloat(c.a))
+        self.init(
+            red: CGFloat(c.r), green: CGFloat(c.g), blue: CGFloat(c.b), alpha: CGFloat(c.a))
         #else
-        self.init(srgbRed: CGFloat(c.r), green: CGFloat(c.g), blue: CGFloat(c.b), alpha: CGFloat(c.a))
+        self.init(
+            srgbRed: CGFloat(c.r), green: CGFloat(c.g), blue: CGFloat(c.b), alpha: CGFloat(c.a))
         #endif
     }
 }

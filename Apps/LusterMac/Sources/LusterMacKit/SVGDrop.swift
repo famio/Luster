@@ -27,7 +27,7 @@ public enum SVGDrop {
             switch self {
             case .nothingUsable:
                 return String(localized: "There’s no SVG in what was dropped.")
-            case let .unreadable(name, reason):
+            case .unreadable(let name, let reason):
                 return String(localized: "\(name) can’t be read. \(reason)")
             }
         }
@@ -36,7 +36,7 @@ public enum SVGDrop {
         public var name: String? {
             switch self {
             case .nothingUsable: return nil
-            case let .unreadable(name, _): return name
+            case .unreadable(let name, _): return name
             }
         }
     }
@@ -44,8 +44,10 @@ public enum SVGDrop {
     /// Reads the first usable item in a drop. Returns false when nothing in the
     /// drop is usable, as `onDrop` expects.
     @discardableResult
-    public static func read(_ providers: [NSItemProvider],
-                            completion: @escaping @Sendable (Result<Item, Failure>) -> Void) -> Bool {
+    public static func read(
+        _ providers: [NSItemProvider],
+        completion: @escaping @Sendable (Result<Item, Failure>) -> Void
+    ) -> Bool {
         guard let provider = providers.first else {
             completion(.failure(.nothingUsable))
             return false
@@ -54,8 +56,11 @@ public enum SVGDrop {
         if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
             _ = provider.loadObject(ofClass: URL.self) { url, error in
                 guard let url else {
-                    completion(.failure(.unreadable(name: String(localized: "The file"),
-                                                    reason: reason(for: error))))
+                    completion(
+                        .failure(
+                            .unreadable(
+                                name: String(localized: "The file"),
+                                reason: reason(for: error))))
                     return
                 }
                 completion(read(contentsOf: url))
@@ -63,10 +68,14 @@ public enum SVGDrop {
             return true
         }
         if provider.hasItemConformingToTypeIdentifier(UTType.svg.identifier) {
-            provider.loadDataRepresentation(forTypeIdentifier: UTType.svg.identifier) { data, error in
+            provider.loadDataRepresentation(forTypeIdentifier: UTType.svg.identifier) {
+                data, error in
                 guard let data else {
-                    completion(.failure(.unreadable(name: "SVG",
-                                                    reason: reason(for: error))))
+                    completion(
+                        .failure(
+                            .unreadable(
+                                name: "SVG",
+                                reason: reason(for: error))))
                     return
                 }
                 completion(.success(Item(data: data, name: "dropped.svg")))
@@ -86,8 +95,10 @@ public enum SVGDrop {
             let data = try Data(contentsOf: url)
             return .success(Item(data: data, name: url.lastPathComponent))
         } catch {
-            return .failure(.unreadable(name: url.lastPathComponent,
-                                        reason: reason(for: error)))
+            return .failure(
+                .unreadable(
+                    name: url.lastPathComponent,
+                    reason: reason(for: error)))
         }
     }
 
@@ -96,10 +107,11 @@ public enum SVGDrop {
         let message = (error as NSError).localizedDescription
         // A refused macOS folder permission looks like a plain read failure; add a hint.
         if (error as NSError).code == NSFileReadNoPermissionError {
-            return String(localized: """
-                \(message) Allow Luster to access this folder in System Settings \
-                > Privacy & Security.
-                """)
+            return String(
+                localized: """
+                    \(message) Allow Luster to access this folder in System Settings \
+                    > Privacy & Security.
+                    """)
         }
         return message
     }

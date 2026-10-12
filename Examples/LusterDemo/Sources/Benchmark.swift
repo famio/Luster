@@ -34,8 +34,10 @@ enum Benchmark {
                 monitor.reset()
                 // A couple of frames after, to catch a hitch at hand-over.
                 try? await Task.sleep(for: .milliseconds(100))
-                print(String(format: "%@\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f", sample.name,
-                             ms(t1 - t0), minting, ms(t2 - t1), building, monitor.longestGap))
+                print(
+                    String(
+                        format: "%@\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f", sample.name,
+                        ms(t1 - t0), minting, ms(t2 - t1), building, monitor.longestGap))
                 show(.data(data), sample.title)
                 try? await Task.sleep(for: .milliseconds(600))
             }

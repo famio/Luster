@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import LusterMacKit
 
 final class BadgeFileNameTests: XCTestCase {

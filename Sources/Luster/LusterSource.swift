@@ -20,7 +20,9 @@ public struct LusterSource: Sendable, Hashable {
     public static func data(_ data: Data) -> LusterSource { .init(storage: .data(data)) }
 
     /// SVG document text.
-    public static func svg(_ text: String) -> LusterSource { .init(storage: .data(Data(text.utf8))) }
+    public static func svg(_ text: String) -> LusterSource {
+        .init(storage: .data(Data(text.utf8)))
+    }
 
     /// Larger inputs are refused before they are read in full.
     public static let maximumBytes = 20 << 20

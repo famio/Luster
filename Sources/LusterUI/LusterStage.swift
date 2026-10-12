@@ -43,8 +43,10 @@ final class LusterStage {
     static let tiltPerPoint = handling.tiltPerPoint
     static let tiltLimit = handling.tiltLimit
 
-    func load(_ source: LusterSource?, options: LusterOptions,
-              appearance: LusterAppearance) async {
+    func load(
+        _ source: LusterSource?, options: LusterOptions,
+        appearance: LusterAppearance
+    ) async {
         guard let source else {
             loaded = nil
             show(nil)

@@ -20,8 +20,10 @@ struct CompareView: View {
             let arguments = CommandLine.arguments
             if !arguments.contains("-only-uiview") {
                 panel("LusterView (SwiftUI)", status: swiftUIStatus) {
-                    LusterView(source: settings.source, options: settings.options,
-                               appearance: settings.appearance) { swiftUIStatus = describe($0) }
+                    LusterView(
+                        source: settings.source, options: settings.options,
+                        appearance: settings.appearance
+                    ) { swiftUIStatus = describe($0) }
                 }
             }
             if !arguments.contains("-only-uiview") && !arguments.contains("-only-swiftui") {
@@ -37,8 +39,10 @@ struct CompareView: View {
         }
     }
 
-    private func panel(_ title: String, status: String,
-                       @ViewBuilder content: () -> some View) -> some View {
+    private func panel(
+        _ title: String, status: String,
+        @ViewBuilder content: () -> some View
+    ) -> some View {
         content()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay(alignment: .topLeading) {
@@ -76,7 +80,8 @@ extension DemoSettings {
         var settings = DemoSettings()
         let arguments = CommandLine.arguments
         if let index = arguments.firstIndex(of: "-sample"), index + 1 < arguments.endIndex,
-           let sample = Sample.benchmarked.first(where: { $0.name == arguments[index + 1] }) {
+            let sample = Sample.benchmarked.first(where: { $0.name == arguments[index + 1] })
+        {
             settings.source = .url(sample.url)
             settings.sourceTitle = sample.title
         }

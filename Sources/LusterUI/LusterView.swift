@@ -36,10 +36,12 @@ public struct LusterView: View {
     @State private var stage = LusterStage()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    public init(source: LusterSource?, options: LusterOptions = .init(),
-                appearance: LusterAppearance = .init(),
-                momentumEnabled: Bool = true,
-                onStateChange: (@MainActor (LusterState) -> Void)? = nil) {
+    public init(
+        source: LusterSource?, options: LusterOptions = .init(),
+        appearance: LusterAppearance = .init(),
+        momentumEnabled: Bool = true,
+        onStateChange: (@MainActor (LusterState) -> Void)? = nil
+    ) {
         self.source = source
         self.options = options
         self.appearance = appearance

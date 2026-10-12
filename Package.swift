@@ -20,8 +20,9 @@ let package = Package(
     targets: [
         ffi,
         // The Swift half of the uniffi bindings, generated; not public API.
-        .target(name: "LusterCore", dependencies: ["LusterFFI"],
-                path: "Sources/LusterCore"),
+        .target(
+            name: "LusterCore", dependencies: ["LusterFFI"],
+            path: "Sources/LusterCore"),
         .target(name: "Luster", dependencies: ["LusterCore"]),
         .target(name: "LusterUI", dependencies: ["Luster"]),
         .testTarget(name: "LusterTests", dependencies: ["Luster"]),

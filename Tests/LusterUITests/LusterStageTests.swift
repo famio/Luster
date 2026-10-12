@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import LusterUI
 
 /// Momentum has to feel the same on a 60 Hz screen and a 120 Hz one, so it
@@ -131,9 +132,10 @@ import Testing
 /// test's badge, kept or being struck, is taken for it.
 private func sampleBadge(for test: String = #function) throws -> Data {
     let here = URL(fileURLWithPath: #filePath)
-    var data = try Data(contentsOf: here.deletingLastPathComponent()
-        .deletingLastPathComponent().deletingLastPathComponent()
-        .appendingPathComponent("fixtures/svg/sample-badge.svg"))
+    var data = try Data(
+        contentsOf: here.deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("fixtures/svg/sample-badge.svg"))
     data.append(contentsOf: Array("<!-- \(test) -->".utf8))
     return data
 }

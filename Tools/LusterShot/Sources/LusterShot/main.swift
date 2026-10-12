@@ -22,8 +22,9 @@ func run() async {
             return Double(arguments[index + 1]) ?? fallback
         }
         do {
-            try await writeToneTable(to: arguments[at + 1], size: Int(number("--size", 17)),
-                                     range: Float(number("--range", 4)))
+            try await writeToneTable(
+                to: arguments[at + 1], size: Int(number("--size", 17)),
+                range: Float(number("--range", 4)))
             FileHandle.standardError.write(Data("wrote \(arguments[at + 1])\n".utf8))
             exit(0)
         } catch {
@@ -58,17 +59,21 @@ func run() async {
         background = color
     }
     // Degrees in, radians out.
-    let pose = SIMD2<Float>(Float(value("--tilt", 7) * .pi / 180),
-                            Float(value("--spin", -20) * .pi / 180))
+    let pose = SIMD2<Float>(
+        Float(value("--tilt", 7) * .pi / 180),
+        Float(value("--spin", -20) * .pi / 180))
 
     do {
-        let image = try await LusterSnapshot.image(.url(URL(fileURLWithPath: files[1])),
-                                                   options: options, appearance: appearance,
-                                                   pose: pose,
-                                                   pixelSize: Int(value("--size", 768)),
-                                                   background: background)
-        guard let data = NSBitmapImageRep(cgImage: image)
-            .representation(using: .png, properties: [:]) else {
+        let image = try await LusterSnapshot.image(
+            .url(URL(fileURLWithPath: files[1])),
+            options: options, appearance: appearance,
+            pose: pose,
+            pixelSize: Int(value("--size", 768)),
+            background: background)
+        guard
+            let data = NSBitmapImageRep(cgImage: image)
+                .representation(using: .png, properties: [:])
+        else {
             throw LusterSnapshot.Failure.noRenderer
         }
         try data.write(to: URL(fileURLWithPath: files[0]), options: .atomic)
@@ -85,9 +90,10 @@ extension LusterColor {
     init?(hex: String) {
         let digits = hex.hasPrefix("#") ? String(hex.dropFirst()) : hex
         guard digits.count == 6, let value = UInt32(digits, radix: 16) else { return nil }
-        self.init(red: Float((value >> 16) & 0xFF) / 255,
-                  green: Float((value >> 8) & 0xFF) / 255,
-                  blue: Float(value & 0xFF) / 255)
+        self.init(
+            red: Float((value >> 16) & 0xFF) / 255,
+            green: Float((value >> 8) & 0xFF) / 255,
+            blue: Float(value & 0xFF) / 255)
     }
 }
 

@@ -79,11 +79,11 @@ final class AppModel: ObservableObject {
 
     private func apply(_ result: Result<SVGDrop.Item, SVGDrop.Failure>) {
         switch result {
-        case let .success(item):
+        case .success(let item):
             svgData = item.data
             fileName = item.name
             alert = nil
-        case let .failure(failure):
+        case .failure(let failure):
             report(failure)
         }
     }
@@ -92,16 +92,18 @@ final class AppModel: ObservableObject {
     /// and the last good badge stays on screen.
     func report(_ error: Error) {
         fileName = BadgeFileName.failureCaption(for: fileName)
-        alert = AppAlert(title: String(localized: "Couldn’t Make the Badge"),
-                         message: error.localizedDescription)
+        alert = AppAlert(
+            title: String(localized: "Couldn’t Make the Badge"),
+            message: error.localizedDescription)
     }
 
     private func report(_ failure: SVGDrop.Failure) {
         if let name = failure.name {
             fileName = BadgeFileName.failureCaption(for: name)
         }
-        alert = AppAlert(title: String(localized: "Couldn’t Open the File"),
-                         message: failure.errorDescription ?? "")
+        alert = AppAlert(
+            title: String(localized: "Couldn’t Open the File"),
+            message: failure.errorDescription ?? "")
     }
 
     func reset() {
@@ -128,8 +130,9 @@ final class AppModel: ObservableObject {
             do {
                 try glb.write(to: url)
             } catch {
-                alert = AppAlert(title: String(localized: "Couldn’t Export"),
-                                 message: error.localizedDescription)
+                alert = AppAlert(
+                    title: String(localized: "Couldn’t Export"),
+                    message: error.localizedDescription)
             }
             isExporting = false
         }

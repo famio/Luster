@@ -2,6 +2,7 @@ import CoreGraphics
 import Foundation
 import RealityKit
 import Testing
+
 @testable import Luster
 
 /// A badge's materials are copies of finishes and colours kept for the
@@ -14,7 +15,9 @@ import Testing
     let first = try await LusterScene.make(badge, appearance: .init())
     let again = try await LusterScene.make(badge, appearance: .init())
     let made = finishes(first)
-    #expect(made.contains { $0.textured } && made.contains { $0.grit } && made.contains { !$0.textured })
+    #expect(
+        made.contains { $0.textured } && made.contains { $0.grit } && made.contains { !$0.textured }
+    )
     #expect(made == finishes(again))
 
     await first.apply(.init(metal: .silver, lighting: .off))
@@ -45,7 +48,10 @@ import Testing
 @MainActor
 @Test func whatIsKeptIsMadeOnceAndTriedAgainAfterAFailure() async throws {
     struct Failed: Error {}
-    final class Count { var made = 0; var failing = true }
+    final class Count {
+        var made = 0
+        var failing = true
+    }
     let count = Count()
     let kept = Kept<Int> {
         count.made += 1
@@ -74,9 +80,10 @@ private struct Made: Equatable {
 @MainActor
 private func finishes(_ scene: LusterScene) -> [Made] {
     (scene.model.model?.materials ?? []).compactMap { $0 as? PhysicallyBasedMaterial }.map { pbr in
-        Made(metallic: pbr.metallic.scale, roughness: pbr.roughness.scale,
-             specular: pbr.specular.scale, tint: components(pbr.baseColor.tint.cgColor),
-             textured: pbr.baseColor.texture != nil, grit: pbr.normal.texture != nil)
+        Made(
+            metallic: pbr.metallic.scale, roughness: pbr.roughness.scale,
+            specular: pbr.specular.scale, tint: components(pbr.baseColor.tint.cgColor),
+            textured: pbr.baseColor.texture != nil, grit: pbr.normal.texture != nil)
     }
 }
 

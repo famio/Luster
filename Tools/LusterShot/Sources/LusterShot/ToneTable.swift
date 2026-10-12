@@ -17,7 +17,8 @@ import RealityKit
 /// reads the same alone as among the others.
 @MainActor
 func writeToneTable(to path: String, size n: Int, range: Float) async throws {
-    let cell = 8, side = n * cell
+    let cell = 8
+    let side = n * cell
     let renderer = try RealityRenderer()
     let camera = PerspectiveCamera()
     // Narrow and far: as good as orthographic, so every patch is seen head on.
@@ -27,9 +28,12 @@ func writeToneTable(to path: String, size n: Int, range: Float) async throws {
     camera.position = [0, 0, width / 2 / tan(Float.pi / 180)]
     renderer.entities.append(camera)
     renderer.activeCamera = camera
-    renderer.cameraSettings.colorBackground = .color(CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 1))
+    renderer.cameraSettings.colorBackground = .color(
+        CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 1))
 
-    guard let device = MTLCreateSystemDefaultDevice() else { throw LusterSnapshot.Failure.noRenderer }
+    guard let device = MTLCreateSystemDefaultDevice() else {
+        throw LusterSnapshot.Failure.noRenderer
+    }
     // Float, so what RealityKit writes is read before anything rounds it.
     let descriptor = MTLTextureDescriptor.texture2DDescriptor(
         pixelFormat: .rgba16Float, width: side, height: side, mipmapped: false)
@@ -60,8 +64,10 @@ func writeToneTable(to path: String, size n: Int, range: Float) async throws {
     for b in 0..<n {
         for g in 0..<n {
             for r in 0..<n {
-                let x = SIMD3<Float>(decode(Float(r) / Float(n - 1)), decode(Float(g) / Float(n - 1)),
-                                     decode(Float(b) / Float(n - 1))) * range
+                let x =
+                    SIMD3<Float>(
+                        decode(Float(r) / Float(n - 1)), decode(Float(g) / Float(n - 1)),
+                        decode(Float(b) / Float(n - 1))) * range
                 // Black, lit by nothing but itself: what shows is the
                 // emission, tone mapped.
                 var material = PhysicallyBasedMaterial()
@@ -71,8 +77,9 @@ func writeToneTable(to path: String, size n: Int, range: Float) async throws {
                 material.specular = .init(floatLiteral: 0)
                 let peak = max(x.x, max(x.y, x.z))
                 let hue = peak > 0 ? x / peak : .zero
-                let color = CGColor(colorSpace: linear,
-                                    components: [CGFloat(hue.x), CGFloat(hue.y), CGFloat(hue.z), 1])!
+                let color = CGColor(
+                    colorSpace: linear,
+                    components: [CGFloat(hue.x), CGFloat(hue.y), CGFloat(hue.z), 1])!
                 material.emissiveColor = .init(color: NSColor(cgColor: color)!)
                 material.emissiveIntensity = peak
                 patches[g * n + r].model?.materials = [material]
@@ -81,18 +88,21 @@ func writeToneTable(to path: String, size n: Int, range: Float) async throws {
         let output = try RealityRenderer.CameraOutput(.singleProjection(colorTexture: texture))
         // The first frame after the materials change can still show the old ones.
         for _ in 0..<2 {
-            try await withCheckedThrowingContinuation { (done: CheckedContinuation<Void, any Error>) in
+            try await withCheckedThrowingContinuation {
+                (done: CheckedContinuation<Void, any Error>) in
                 do {
-                    try renderer.updateAndRender(deltaTime: 1 / 60, cameraOutput: output,
-                                                 onComplete: { _ in done.resume() })
+                    try renderer.updateAndRender(
+                        deltaTime: 1 / 60, cameraOutput: output,
+                        onComplete: { _ in done.resume() })
                 } catch {
                     done.resume(throwing: error)
                 }
             }
         }
         var pixels = [UInt16](repeating: 0, count: side * side * 4)
-        texture.getBytes(&pixels, bytesPerRow: side * 8,
-                         from: MTLRegionMake2D(0, 0, side, side), mipmapLevel: 0)
+        texture.getBytes(
+            &pixels, bytesPerRow: side * 8,
+            from: MTLRegionMake2D(0, 0, side, side), mipmapLevel: 0)
         for g in 0..<n {
             for r in 0..<n {
                 let at = ((g * cell + cell / 2) * side + r * cell + cell / 2) * 4

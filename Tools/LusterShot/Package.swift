@@ -8,8 +8,10 @@ let package = Package(
     platforms: [.macOS(.v15)],
     dependencies: [.package(path: "../..")],
     targets: [
-        .executableTarget(name: "LusterShot", dependencies: [
-            .product(name: "Luster", package: "Luster"),
-        ]),
+        .executableTarget(
+            name: "LusterShot",
+            dependencies: [
+                .product(name: "Luster", package: "Luster")
+            ])
     ]
 )

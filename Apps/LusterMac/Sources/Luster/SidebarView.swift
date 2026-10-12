@@ -23,9 +23,11 @@ struct SidebarView: View {
                 label("Lighting")
                 // Off is for checking a badge's shape: lamps alone, no
                 // reflections.
-                switchRow("Shine and reflections", isOn: Binding(
-                    get: { model.lighting == .showcase },
-                    set: { model.lighting = $0 ? .showcase : .off }))
+                switchRow(
+                    "Shine and reflections",
+                    isOn: Binding(
+                        get: { model.lighting == .showcase },
+                        set: { model.lighting = $0 ? .showcase : .off }))
             }
 
             hairline
@@ -92,8 +94,11 @@ struct SidebarView: View {
             model.metal = color
         } label: {
             Circle()
-                .fill(Color(.sRGB, red: Double(color.red), green: Double(color.green),
-                            blue: Double(color.blue)))
+                .fill(
+                    Color(
+                        .sRGB, red: Double(color.red), green: Double(color.green),
+                        blue: Double(color.blue))
+                )
                 .overlay(Circle().strokeBorder(Palette.swatchEdge, lineWidth: 1))
                 .frame(width: 26, height: 26)
                 .overlay {

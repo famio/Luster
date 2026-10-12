@@ -1,6 +1,7 @@
 import Foundation
 import RealityKit
 import Testing
+
 @testable import Luster
 
 /// Under the showcase the enamel keeps half its glare, as through a
@@ -14,7 +15,9 @@ import Testing
     let scene = try await LusterScene.make(badge, appearance: LusterAppearance(lighting: .showcase))
 
     func glare() -> (enamel: Set<Float>, metal: Set<Float>) {
-        let materials = (scene.model.model?.materials ?? []).compactMap { $0 as? PhysicallyBasedMaterial }
+        let materials = (scene.model.model?.materials ?? []).compactMap {
+            $0 as? PhysicallyBasedMaterial
+        }
         let enamel = materials.filter { $0.metallic.scale == 0 }.map(\.specular.scale)
         let metal = materials.filter { $0.metallic.scale == 1 }.map(\.specular.scale)
         return (Set(enamel), Set(metal))

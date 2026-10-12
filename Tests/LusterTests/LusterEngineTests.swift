@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Luster
 
 /// The engine linked in is the one this checkout builds: its version is the
@@ -67,7 +68,10 @@ private func badge(_ mark: String = #function) throws -> LusterSource {
     let source = try badge()
     let keys = try await withThrowingTaskGroup(of: String.self) { group in
         for metalLines in [false, true, false, true] {
-            group.addTask { try await LusterEngine.mint(source, options: .init(metalLines: metalLines)).designKey }
+            group.addTask {
+                try await LusterEngine.mint(source, options: .init(metalLines: metalLines))
+                    .designKey
+            }
         }
         return try await group.reduce(into: Set<String>()) { $0.insert($1) }
     }

@@ -17,22 +17,26 @@ public enum LusterEngine {
     /// asking again for the same source is immediate, and asking for one
     /// already being minted waits for that mint rather than starting another.
     /// The engine does all of this, as it does on every platform.
-    public static func mint(_ source: LusterSource,
-                            options: LusterOptions = .init()) async throws -> LusterBadge {
+    public static func mint(
+        _ source: LusterSource,
+        options: LusterOptions = .init()
+    ) async throws -> LusterBadge {
         let data = try await source.load()
         try Task.checkCancellation()
         let request = LusterCore.MintRequest(
             svg: data,
-            options: .init(withoutHiddenFaces: options.withoutHiddenFaces,
-                           metalLines: options.metalLines))
+            options: .init(
+                withoutHiddenFaces: options.withoutHiddenFaces,
+                metalLines: options.metalLines))
         do {
             // The engine's future does not hear of a cancelled task: it is
             // told.
-            return LusterBadge(try await withTaskCancellationHandler {
-                try await request.badge()
-            } onCancel: {
-                request.cancel()
-            })
+            return LusterBadge(
+                try await withTaskCancellationHandler {
+                    try await request.badge()
+                } onCancel: {
+                    request.cancel()
+                })
         } catch LusterCore.LusterError.Cancelled {
             throw CancellationError()
         } catch let error as LusterCore.LusterError {

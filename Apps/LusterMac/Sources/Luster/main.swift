@@ -5,7 +5,8 @@ import Luster
 // opened in a known state before SwiftUI takes over.
 func flagValue(_ flag: String) -> String? {
     guard let i = CommandLine.arguments.firstIndex(of: flag),
-          i + 1 < CommandLine.arguments.count else { return nil }
+        i + 1 < CommandLine.arguments.count
+    else { return nil }
     return CommandLine.arguments[i + 1]
 }
 

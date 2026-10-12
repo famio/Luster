@@ -68,13 +68,19 @@ final class InteractionTests: XCTestCase {
         for tab in ["SwiftUI", "UIKit", "SwiftUI"] {
             app.buttons[tab].tap()
             XCTAssertTrue(app.buttons[tab].isSelected, "\(tab): the tab did not open")
-            XCTAssertTrue(app.otherElements["Badge"].firstMatch.waitForExistence(timeout: 20),
-                          "\(tab): no badge")
+            XCTAssertTrue(
+                app.otherElements["Badge"].firstMatch.waitForExistence(timeout: 20),
+                "\(tab): no badge")
             let metal = app.buttons.matching(identifier: "Metal").firstMatch
-            XCTAssertTrue(metal.label.contains("Silver"), "\(tab): the Metal button shows \(metal.label)")
+            XCTAssertTrue(
+                metal.label.contains("Silver"), "\(tab): the Metal button shows \(metal.label)")
             let status = app.staticTexts.matching(identifier: "status").firstMatch
-            wait(for: [expectation(for: NSPredicate(format: "label BEGINSWITH 'ready'"), evaluatedWith: status)],
-                 timeout: 60)
+            wait(
+                for: [
+                    expectation(
+                        for: NSPredicate(format: "label BEGINSWITH 'ready'"), evaluatedWith: status)
+                ],
+                timeout: 60)
             sleep(2)
             shot(app, "silver-\(tab)")
         }
@@ -91,20 +97,30 @@ final class InteractionTests: XCTestCase {
             XCTAssertTrue(app.buttons[tab].isSelected, "\(tab): the tab did not open")
             let glb = app.buttons.matching(identifier: "GLB").firstMatch
             XCTAssertTrue(glb.waitForExistence(timeout: 5), "\(tab): no GLB button")
-            wait(for: [expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: glb)],
-                 timeout: 60)
+            wait(
+                for: [
+                    expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: glb)
+                ],
+                timeout: 60)
             glb.tap()
             // The sheet is another process's and not in the app's tree, so
             // the demo's status line is what says it is up.
             let status = app.staticTexts.matching(identifier: "status").firstMatch
-            wait(for: [expectation(for: NSPredicate(format: "label == 'saving Namiura.glb…'"),
-                                   evaluatedWith: status)], timeout: 10)
+            wait(
+                for: [
+                    expectation(
+                        for: NSPredicate(format: "label == 'saving Namiura.glb…'"),
+                        evaluatedWith: status)
+                ], timeout: 10)
             sleep(2)
             shot(app, "glb-\(tab)")
             // Swipe the sheet away; one that is still loading can ignore it.
             for _ in 0..<5 where status.label != "not saved" {
                 app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1))
-                    .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95)))
+                    .press(
+                        forDuration: 0.1,
+                        thenDragTo: app.coordinate(
+                            withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95)))
                 sleep(2)
             }
             XCTAssertEqual(status.label, "not saved", "\(tab): the save sheet did not go away")

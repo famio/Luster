@@ -69,9 +69,10 @@ final class CompareTests: XCTestCase {
 
     private func flick(_ badge: XCUIElement) {
         badge.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.5))
-            .press(forDuration: 0.05,
-                   thenDragTo: badge.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.5)),
-                   withVelocity: 2500, thenHoldForDuration: 0)
+            .press(
+                forDuration: 0.05,
+                thenDragTo: badge.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.5)),
+                withVelocity: 2500, thenHoldForDuration: 0)
     }
 
     private func pick(_ app: XCUIApplication, menu: String, _ choice: String) {

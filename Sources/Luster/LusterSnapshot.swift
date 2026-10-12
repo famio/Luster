@@ -14,23 +14,28 @@ public enum LusterSnapshot {
     /// A square still of the badge at `pose` (tilt, spin; radians), over
     /// `background`, or with nothing behind it when that is nil: the image's
     /// alpha is then the badge's coverage.
-    public static func image(_ source: LusterSource,
-                             options: LusterOptions = .init(),
-                             appearance: LusterAppearance = .init(),
-                             pose: SIMD2<Float> = LusterScene.restingPose,
-                             pixelSize: Int = 768,
-                             background: LusterColor? = nil) async throws -> CGImage {
+    public static func image(
+        _ source: LusterSource,
+        options: LusterOptions = .init(),
+        appearance: LusterAppearance = .init(),
+        pose: SIMD2<Float> = LusterScene.restingPose,
+        pixelSize: Int = 768,
+        background: LusterColor? = nil
+    ) async throws -> CGImage {
         LusterEngine.prewarm()
         let badge = try await LusterEngine.mint(source, options: options)
-        return try await image(badge, appearance: appearance, pose: pose, pixelSize: pixelSize,
-                               background: background)
+        return try await image(
+            badge, appearance: appearance, pose: pose, pixelSize: pixelSize,
+            background: background)
     }
 
-    public static func image(_ badge: LusterBadge,
-                             appearance: LusterAppearance = .init(),
-                             pose: SIMD2<Float> = LusterScene.restingPose,
-                             pixelSize: Int = 768,
-                             background: LusterColor? = nil) async throws -> CGImage {
+    public static func image(
+        _ badge: LusterBadge,
+        appearance: LusterAppearance = .init(),
+        pose: SIMD2<Float> = LusterScene.restingPose,
+        pixelSize: Int = 768,
+        background: LusterColor? = nil
+    ) async throws -> CGImage {
         let scene = try await LusterScene.make(badge, appearance: appearance)
         scene.pose = pose
         return try await image(scene, pixelSize: pixelSize, background: background)
@@ -38,8 +43,10 @@ public enum LusterSnapshot {
 
     /// Renders a scene that is already set up, lit as it is in a view: a
     /// still is the picture the view shows.
-    public static func image(_ scene: LusterScene, pixelSize: Int = 768,
-                             background: LusterColor? = nil) async throws -> CGImage {
+    public static func image(
+        _ scene: LusterScene, pixelSize: Int = 768,
+        background: LusterColor? = nil
+    ) async throws -> CGImage {
         let renderer = try RealityRenderer()
         renderer.entities.append(scene.root)
         renderer.activeCamera = scene.camera
@@ -67,12 +74,14 @@ public enum LusterSnapshot {
         let done = Once()
         // The renderer has to outlive the render it is waiting on.
         defer { withExtendedLifetime(renderer) {} }
-        try await withCheckedThrowingContinuation { (finished: CheckedContinuation<Void, any Error>) in
+        try await withCheckedThrowingContinuation {
+            (finished: CheckedContinuation<Void, any Error>) in
             do {
-                try renderer.updateAndRender(deltaTime: 0, cameraOutput: output,
-                                             onComplete: { _ in
-                                                 if done.claim() { finished.resume() }
-                                             })
+                try renderer.updateAndRender(
+                    deltaTime: 0, cameraOutput: output,
+                    onComplete: { _ in
+                        if done.claim() { finished.resume() }
+                    })
             } catch {
                 if done.claim() { finished.resume(throwing: error) }
                 return
@@ -108,19 +117,22 @@ public enum LusterSnapshot {
 
     /// The texture's pixels as an image.
     private static func read(_ texture: any MTLTexture) throws -> CGImage {
-        let width = texture.width, height = texture.height
+        let width = texture.width
+        let height = texture.height
         var bytes = [UInt8](repeating: 0, count: width * height * 4)
         bytes.withUnsafeMutableBytes { raw in
-            texture.getBytes(raw.baseAddress!, bytesPerRow: width * 4,
-                             from: MTLRegionMake2D(0, 0, width, height), mipmapLevel: 0)
+            texture.getBytes(
+                raw.baseAddress!, bytesPerRow: width * 4,
+                from: MTLRegionMake2D(0, 0, width, height), mipmapLevel: 0)
         }
         guard let space = CGColorSpace(name: CGColorSpace.sRGB),
-              let provider = CGDataProvider(data: Data(bytes) as CFData),
-              let image = CGImage(width: width, height: height, bitsPerComponent: 8,
-                                  bitsPerPixel: 32, bytesPerRow: width * 4, space: space,
-                                  bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
-                                  provider: provider, decode: nil, shouldInterpolate: true,
-                                  intent: .defaultIntent)
+            let provider = CGDataProvider(data: Data(bytes) as CFData),
+            let image = CGImage(
+                width: width, height: height, bitsPerComponent: 8,
+                bitsPerPixel: 32, bytesPerRow: width * 4, space: space,
+                bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
+                provider: provider, decode: nil, shouldInterpolate: true,
+                intent: .defaultIntent)
         else { throw Failure.noRenderer }
         return image
     }
@@ -129,8 +141,9 @@ public enum LusterSnapshot {
 extension LusterColor {
     /// The colour as CoreGraphics sees it.
     public var cgColor: CGColor {
-        CGColor(colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
-                components: [CGFloat(red), CGFloat(green), CGFloat(blue), 1])
+        CGColor(
+            colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
+            components: [CGFloat(red), CGFloat(green), CGFloat(blue), 1])
             ?? CGColor(gray: 0, alpha: 1)
     }
 }

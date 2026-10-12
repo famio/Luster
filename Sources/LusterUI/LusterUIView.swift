@@ -69,8 +69,9 @@ public final class LusterUIView: UIView {
     /// before the view laid it out, to be given back with it.
     private var placedTranslating = true
     private let stage = LusterStage()
-    private let arView = ARView(frame: .zero, cameraMode: .nonAR,
-                                automaticallyConfigureSession: false)
+    private let arView = ARView(
+        frame: .zero, cameraMode: .nonAR,
+        automaticallyConfigureSession: false)
     private var updates: (any Cancellable)?
     private var loading: Task<Void, Never>?
     private var applying: Task<Void, Never>?
@@ -86,10 +87,12 @@ public final class LusterUIView: UIView {
         arView.environment.background = .color(.clear)
         // Nothing of AR's: no camera grain, motion blur or depth of field,
         // and no extended range, as LusterView keeps to the standard one.
-        arView.renderOptions = [.disableCameraGrain, .disableMotionBlur, .disableDepthOfField,
-                                .disableHDR, .disableGroundingShadows,
-                                .disableAREnvironmentLighting, .disablePersonOcclusion,
-                                .disableFaceMesh]
+        arView.renderOptions = [
+            .disableCameraGrain, .disableMotionBlur, .disableDepthOfField,
+            .disableHDR, .disableGroundingShadows,
+            .disableAREnvironmentLighting, .disablePersonOcclusion,
+            .disableFaceMesh,
+        ]
         arView.frame = bounds
         arView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         addSubview(arView)
@@ -168,19 +171,24 @@ public final class LusterUIView: UIView {
         placedTranslating = placeholder.translatesAutoresizingMaskIntoConstraints
         placeholder.translatesAutoresizingMaskIntoConstraints = false
         box.addSubview(placeholder)
-        let fill = [placeholder.widthAnchor.constraint(equalTo: box.widthAnchor),
-                    placeholder.heightAnchor.constraint(equalTo: box.heightAnchor)]
+        let fill = [
+            placeholder.widthAnchor.constraint(equalTo: box.widthAnchor),
+            placeholder.heightAnchor.constraint(equalTo: box.heightAnchor),
+        ]
         // Under the hugging of a view with a size of its own.
         for each in fill { each.priority = .fittingSizeLevel }
-        NSLayoutConstraint.activate(fill + [
-            placeholder.centerXAnchor.constraint(equalTo: box.centerXAnchor),
-            placeholder.centerYAnchor.constraint(equalTo: box.centerYAnchor),
-            placeholder.widthAnchor.constraint(lessThanOrEqualTo: box.widthAnchor),
-            placeholder.heightAnchor.constraint(lessThanOrEqualTo: box.heightAnchor),
-        ])
+        NSLayoutConstraint.activate(
+            fill + [
+                placeholder.centerXAnchor.constraint(equalTo: box.centerXAnchor),
+                placeholder.centerYAnchor.constraint(equalTo: box.centerYAnchor),
+                placeholder.widthAnchor.constraint(lessThanOrEqualTo: box.widthAnchor),
+                placeholder.heightAnchor.constraint(lessThanOrEqualTo: box.heightAnchor),
+            ])
     }
 
-    private var placeholderUp: Bool { placeholderView != nil && source != nil && !stage.showing }
+    private var placeholderUp: Bool {
+        placeholderView != nil && source != nil && !stage.showing
+    }
 
     private func updatePlaceholder(animated: Bool) {
         let box = placeholderBox
@@ -247,7 +255,7 @@ private final class DragGestureRecognizer: UIGestureRecognizer {
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         guard state == .possible, let touch = touches.first else {
-            touches.forEach { ignore($0, for: event) }
+            for touch in touches { ignore(touch, for: event) }
             return
         }
         start = touch.location(in: view)
@@ -270,8 +278,9 @@ private final class DragGestureRecognizer: UIGestureRecognizer {
         let recent = samples.filter { touch.timestamp - $0.time <= Self.window }
         if let first = recent.first, let last = recent.last, last.time > first.time {
             let dt = last.time - first.time
-            velocity = CGSize(width: (last.point.x - first.point.x) / dt,
-                              height: (last.point.y - first.point.y) / dt)
+            velocity = CGSize(
+                width: (last.point.x - first.point.x) / dt,
+                height: (last.point.y - first.point.y) / dt)
         } else {
             velocity = .zero
         }

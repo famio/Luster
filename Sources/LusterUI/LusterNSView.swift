@@ -61,9 +61,10 @@ public final class LusterNSView: NSView {
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
     private func refresh() {
-        var view = LusterView(source: source, options: options,
-                              appearance: badgeAppearance, momentumEnabled: momentumEnabled,
-                              onStateChange: onStateChange)
+        var view = LusterView(
+            source: source, options: options,
+            appearance: badgeAppearance, momentumEnabled: momentumEnabled,
+            onStateChange: onStateChange)
         view.onPlaceholderChange = { [weak self] due in
             guard let self else { return }
             placeholderDue = due
@@ -81,16 +82,19 @@ public final class LusterNSView: NSView {
         placedTranslating = placeholder.translatesAutoresizingMaskIntoConstraints
         placeholder.translatesAutoresizingMaskIntoConstraints = false
         box.addSubview(placeholder)
-        let fill = [placeholder.widthAnchor.constraint(equalTo: box.widthAnchor),
-                    placeholder.heightAnchor.constraint(equalTo: box.heightAnchor)]
+        let fill = [
+            placeholder.widthAnchor.constraint(equalTo: box.widthAnchor),
+            placeholder.heightAnchor.constraint(equalTo: box.heightAnchor),
+        ]
         // Under the hugging of a view with a size of its own.
         for each in fill { each.priority = .fittingSizeCompression }
-        NSLayoutConstraint.activate(fill + [
-            placeholder.centerXAnchor.constraint(equalTo: box.centerXAnchor),
-            placeholder.centerYAnchor.constraint(equalTo: box.centerYAnchor),
-            placeholder.widthAnchor.constraint(lessThanOrEqualTo: box.widthAnchor),
-            placeholder.heightAnchor.constraint(lessThanOrEqualTo: box.heightAnchor),
-        ])
+        NSLayoutConstraint.activate(
+            fill + [
+                placeholder.centerXAnchor.constraint(equalTo: box.centerXAnchor),
+                placeholder.centerYAnchor.constraint(equalTo: box.centerYAnchor),
+                placeholder.widthAnchor.constraint(lessThanOrEqualTo: box.widthAnchor),
+                placeholder.heightAnchor.constraint(lessThanOrEqualTo: box.heightAnchor),
+            ])
     }
 
     private var placeholderUp: Bool { placeholderView != nil && placeholderDue }

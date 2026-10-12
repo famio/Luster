@@ -3,6 +3,7 @@ import Foundation
 import Metal
 import RealityKit
 import Testing
+
 @testable import Luster
 
 /// A still carries the light the renderer works out encoded as sRGB, as a
@@ -34,7 +35,9 @@ import Testing
         let still = try await LusterSnapshot.image(badge, pixelSize: 64, background: background)
         let bytes = try #require(pixels(still))
         let corner = [bytes[0], bytes[1], bytes[2], bytes[3]].map(Int.init)
-        let wanted = [background.red, background.green, background.blue, 1].map { Int(($0 * 255).rounded()) }
+        let wanted = [background.red, background.green, background.blue, 1].map {
+            Int(($0 * 255).rounded())
+        }
         for (got, want) in zip(corner, wanted) {
             #expect(abs(got - want) <= 1, "\(corner) against \(wanted)")
         }
@@ -58,14 +61,21 @@ import Testing
     #expect(!edge.isEmpty && edge.count < size * size / 20, "\(edge.count) pixels of edge")
 
     for background in [backdrop, LusterColor(red: 1, green: 1, blue: 1)] {
-        let over = try #require(pixels(try await LusterSnapshot.image(badge, pixelSize: size,
-                                                                       background: background)))
-        let under = [background.red, background.green, background.blue].map { Int(($0 * 255).rounded()) }
-        var badgeOff = 0, groundOff = 0
+        let over = try #require(
+            pixels(
+                try await LusterSnapshot.image(
+                    badge, pixelSize: size,
+                    background: background)))
+        let under = [background.red, background.green, background.blue].map {
+            Int(($0 * 255).rounded())
+        }
+        var badgeOff = 0
+        var groundOff = 0
         for i in 0..<(size * size) {
             for c in 0..<3 {
                 switch clear[i * 4 + 3] {
-                case 255: badgeOff = max(badgeOff, abs(Int(clear[i * 4 + c]) - Int(over[i * 4 + c])))
+                case 255:
+                    badgeOff = max(badgeOff, abs(Int(clear[i * 4 + c]) - Int(over[i * 4 + c])))
                 case 0: groundOff = max(groundOff, abs(under[c] - Int(over[i * 4 + c])))
                 default: break
                 }
@@ -102,8 +112,9 @@ private func render(_ scene: LusterScene, size: Int, background: CGColor) async 
     let output = try RealityRenderer.CameraOutput(.singleProjection(colorTexture: texture))
     try await withCheckedThrowingContinuation { (done: CheckedContinuation<Void, any Error>) in
         do {
-            try renderer.updateAndRender(deltaTime: 0, cameraOutput: output,
-                                         onComplete: { _ in done.resume() })
+            try renderer.updateAndRender(
+                deltaTime: 0, cameraOutput: output,
+                onComplete: { _ in done.resume() })
         } catch {
             done.resume(throwing: error)
         }
@@ -112,8 +123,9 @@ private func render(_ scene: LusterScene, size: Int, background: CGColor) async 
     renderer.entities.removeAll()
     var halves = [UInt16](repeating: 0, count: size * size * 4)
     halves.withUnsafeMutableBytes { raw in
-        texture.getBytes(raw.baseAddress!, bytesPerRow: size * 8,
-                         from: MTLRegionMake2D(0, 0, size, size), mipmapLevel: 0)
+        texture.getBytes(
+            raw.baseAddress!, bytesPerRow: size * 8,
+            from: MTLRegionMake2D(0, 0, size, size), mipmapLevel: 0)
     }
     return halves.map(float)
 }

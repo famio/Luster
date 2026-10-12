@@ -11,7 +11,8 @@ import UniformTypeIdentifiers
 struct DemoView: View {
     /// How the badge is drawn: the one tab or the other.
     enum Renderer: String, CaseIterable, Identifiable {
-        case swiftUI = "SwiftUI", uiKit = "UIKit"
+        case swiftUI = "SwiftUI"
+        case uiKit = "UIKit"
         var id: Self { self }
         var symbol: String { self == .swiftUI ? "swift" : "square.stack" }
 
@@ -41,8 +42,10 @@ struct DemoView: View {
                 switch renderer {
                 case .swiftUI:
                     // The status line says why a badge failed.
-                    LusterView(source: settings.source, options: settings.options,
-                               appearance: settings.appearance, onStateChange: report) { state in
+                    LusterView(
+                        source: settings.source, options: settings.options,
+                        appearance: settings.appearance, onStateChange: report
+                    ) { state in
                         if case .minting = state { ProgressView().controlSize(.large) }
                     }
                 case .uiKit:
@@ -51,34 +54,39 @@ struct DemoView: View {
             }
             .id(renderer)
             VStack(alignment: .leading, spacing: 8) {
-                DemoMenuBar(settings: $settings, open: { importing = true },
-                            export: badge.map { badge in { export(badge) } })
+                DemoMenuBar(
+                    settings: $settings, open: { importing = true },
+                    export: badge.map { badge in { export(badge) } })
                 Text(status).font(.caption.monospaced()).foregroundStyle(.secondary)
                     .lineLimit(1).truncationMode(.middle)
                     .accessibilityIdentifier("status")
             }
             .padding()
             tabBar
-            // Not on the same view as the importer: SwiftUI shows one file
-            // panel per view.
-            .fileExporter(isPresented: $exporting, document: glb, contentType: .glb,
-                          defaultFilename: settings.exportName) { result in
-                switch result {
-                case .success:
-                    if let glb { status = DemoSettings.exported(glb.data, as: settings.exportName) }
-                case .failure(CocoaError.userCancelled): status = DemoSettings.notSaved
-                case .failure(let error): status = "failed: \(error.localizedDescription)"
+                // Not on the same view as the importer: SwiftUI shows one file
+                // panel per view.
+                .fileExporter(
+                    isPresented: $exporting, document: glb, contentType: .glb,
+                    defaultFilename: settings.exportName
+                ) { result in
+                    switch result {
+                    case .success:
+                        if let glb {
+                            status = DemoSettings.exported(glb.data, as: settings.exportName)
+                        }
+                    case .failure(CocoaError.userCancelled): status = DemoSettings.notSaved
+                    case .failure(let error): status = "failed: \(error.localizedDescription)"
+                    }
+                    glb = nil
                 }
-                glb = nil
-            }
-            // Swiping the sheet away closes it without a word to the handler
-            // above. A save may be told of after the sheet closes, so only a
-            // sheet still waiting is taken as dismissed.
-            .onChange(of: exporting) {
-                if !exporting, status == DemoSettings.saving(as: settings.exportName) {
-                    status = DemoSettings.notSaved
+                // Swiping the sheet away closes it without a word to the handler
+                // above. A save may be told of after the sheet closes, so only a
+                // sheet still waiting is taken as dismissed.
+                .onChange(of: exporting) {
+                    if !exporting, status == DemoSettings.saving(as: settings.exportName) {
+                        status = DemoSettings.notSaved
+                    }
                 }
-            }
         }
         .onAppear { monitor.start() }
         .task {
@@ -103,8 +111,9 @@ struct DemoView: View {
         case .ready(let badge):
             self.badge = badge
             let ms = Date().timeIntervalSince(started) * 1000
-            status = String(format: "ready %@ · %.0f ms · longest frame gap %.0f ms",
-                            String(badge.designKey.prefix(6)), ms, monitor.longestGap)
+            status = String(
+                format: "ready %@ · %.0f ms · longest frame gap %.0f ms",
+                String(badge.designKey.prefix(6)), ms, monitor.longestGap)
         case .failed(let error): status = "failed: \(error)"
         }
     }

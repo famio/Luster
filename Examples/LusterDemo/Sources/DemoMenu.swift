@@ -4,10 +4,12 @@ import LusterUI
 /// Everything the demo's menus set.
 struct DemoSettings: Equatable {
     /// `-url <url>` opens on a document on the web instead of the first sample.
-    var source: LusterSource? = DemoSettings.startingURL.map { .url($0) }
+    var source: LusterSource? =
+        DemoSettings.startingURL.map { .url($0) }
         ?? Sample.first.map { .url($0.url) }
     /// What the SVG button shows: the name of the document on the badge.
-    var sourceTitle = DemoSettings.startingURL.map { $0.deletingPathExtension().lastPathComponent }
+    var sourceTitle =
+        DemoSettings.startingURL.map { $0.deletingPathExtension().lastPathComponent }
         ?? Sample.first?.title ?? "—"
 
     private static var startingURL: URL? {
@@ -75,25 +77,33 @@ struct DemoMenu: Identifiable {
     static let exportTitle = "GLB"
     static let exportSymbol = "square.and.arrow.up"
 
-    @MainActor static let lines = choices("Lines", "scribble.variable", \.metalLines,
-                               [("Plated", false), ("Metal", true)])
+    @MainActor static let lines = choices(
+        "Lines", "scribble.variable", \.metalLines,
+        [("Plated", false), ("Metal", true)])
 
-    @MainActor static let metal = choices("Metal", "paintpalette", \.appearance.metal, [
-        ("Gold", .gold),
-        ("Silver", .silver),
-        ("Copper", .copper),
-    ])
+    @MainActor static let metal = choices(
+        "Metal", "paintpalette", \.appearance.metal,
+        [
+            ("Gold", .gold),
+            ("Silver", .silver),
+            ("Copper", .copper),
+        ])
 
-    @MainActor static let light = choices("Light", "lightbulb", \.appearance.lighting,
-                               [("Showcase", .showcase), ("Off", .off)])
+    @MainActor static let light = choices(
+        "Light", "lightbulb", \.appearance.lighting,
+        [("Showcase", .showcase), ("Off", .off)])
 
     @MainActor private static func choices<Value: Equatable>(
         _ title: String, _ symbol: String,
         _ path: WritableKeyPath<DemoSettings, Value>,
         _ values: [(String, Value)]
     ) -> DemoMenu {
-        DemoMenu(title: title, symbol: symbol, items: values.map { name, value in
-            Item(title: name, isOn: { $0[keyPath: path] == value }, apply: { $0[keyPath: path] = value })
-        })
+        DemoMenu(
+            title: title, symbol: symbol,
+            items: values.map { name, value in
+                Item(
+                    title: name, isOn: { $0[keyPath: path] == value },
+                    apply: { $0[keyPath: path] = value })
+            })
     }
 }
