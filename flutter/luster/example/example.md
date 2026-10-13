@@ -38,13 +38,13 @@ class _BadgePageState extends State<BadgePage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: LusterView(
-          source: source,
-          placeholder: (context, state) => state is LusterFailed
-              ? const Icon(Icons.error_outline)
-              : const CircularProgressIndicator(),
-        ),
-      );
+    body: LusterView(
+      source: source,
+      placeholder: (context, state) => state is LusterFailed
+          ? const Icon(Icons.error_outline)
+          : const CircularProgressIndicator(),
+    ),
+  );
 }
 ```
 
