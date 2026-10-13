@@ -1,10 +1,6 @@
 name: luster
 description: "Mints SVG artwork into a lit 3D badge, rendered with flutter_scene. The engine is Luster's Rust core."
-version: 0.2.0
-# Published only from a tag. Here darwin/luster/Package.swift points at the
-# engine a checkout builds, which a published package would not carry;
-# Scripts/release.sh points it at the release's zip and takes these lines out.
-publish_to: none
+version: 0.3.0
 homepage: https://github.com/famio/Luster
 repository: https://github.com/famio/Luster
 issue_tracker: https://github.com/famio/Luster/issues

@@ -7,7 +7,8 @@ import PackageDescription
 // GitHub release instead (Scripts/release.sh rewrites this target).
 let ffi: Target = .binaryTarget(
     name: "LusterFFI",
-    path: "rust/target/apple/LusterFFI.xcframework"
+    url: "https://github.com/famio/Luster/releases/download/0.3.0/LusterFFI.xcframework.zip",
+    checksum: "d47042e340e9d38ed127d3bd75eaf3e373c84a3becae07fca83b2df5e0973c4f"
 )
 
 let package = Package(
