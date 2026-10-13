@@ -134,9 +134,10 @@ checksum, so a consumer never needs Rust. It pushes nothing.
 
 After the tag it commits both manifests back to the local XCFrameworks, so work on the
 branch goes on against the engine built from it. That is also why pub.dev is published
-from the tag: only there does the plugin's manifest name the release's zip. Elsewhere
-`publish_to: none` in `flutter/luster/pubspec.yaml` makes `dart pub publish` refuse;
-`release.sh` takes it out for the tag and puts it back after.
+from the tag: only there does the plugin's manifest name the release's zip, and a
+package published from anywhere else has no engine on iOS and macOS. Nothing in the
+branch stops `dart pub publish` there: `publish_to: none` would, but pub.dev's score
+reads the default branch's pubspec and marks the repository unverified for it.
 
 When the release is really wanted, from the repository's root:
 

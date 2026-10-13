@@ -45,7 +45,7 @@ Scripts/release.sh X --dry-run
 - 終了コード 0
 - `cargo test` がすべて `ok`、`swift test` の `Test run with … passed`
 - parity が `svg: matches fixtures/golden`（fixtures のすべてで `artwork and badges match`）
-- 最後の差分が 2 つの `Package.swift`（URL とチェックサム）、`flutter/luster/pubspec.yaml`（版番号と `publish_to` の除去）と版番号のファイルだけで、作業ツリーが元に戻っている
+- 最後の差分が 2 つの `Package.swift`（URL とチェックサム）、`flutter/luster/pubspec.yaml`（版番号）と版番号のファイルだけで、作業ツリーが元に戻っている
 
 ## 2. 本番（手元にコミットとタグを作るだけ）
 
@@ -58,7 +58,7 @@ Scripts/release.sh X
 - 注釈付きタグ X が `chore(release): X` を指している（`git rev-parse --short X^{commit}`）
 - `swift package compute-checksum rust/target/apple/LusterFFI.xcframework.zip` が、`git show X:Package.swift` の `checksum:` と一致
 - `swift package compute-checksum rust/target/flutter/luster_dart.xcframework.zip` が、`git show X:flutter/luster/darwin/luster/Package.swift` の `checksum:` と一致
-- HEAD の 2 つの `Package.swift` はローカルのパスに戻り、pubspec には `publish_to: none` が戻っている。タグの pubspec には無い。作業ツリーがきれい
+- HEAD の 2 つの `Package.swift` はローカルのパスに戻っている。作業ツリーがきれい
 
 ## 3. push と draft
 
@@ -106,15 +106,15 @@ gh run watch <run-id> --exit-status
 
 ## 6. pub.dev（ユーザーが実行する）
 
-**タグから出す。** main の `flutter/luster/darwin/luster/Package.swift` は手元のビルド（`path:`）を指していて、pub.dev には XCFramework が入らない（`.pubignore`）。main から出すと iOS/macOS で使えないパッケージになる。そのため main の `flutter/luster/pubspec.yaml` には `publish_to: none` があり、`dart pub publish` は「A private package cannot be published.」で止まる（dry run は止まらない）。`release.sh` がタグのコミットでだけこれを外す。
+**タグから出す。** main の `flutter/luster/darwin/luster/Package.swift` は手元のビルド（`path:`）を指していて、pub.dev には XCFramework が入らない（`.pubignore`）。main から出すと iOS/macOS で使えないパッケージになる。**main から出しても止めるものは無い。** pubspec に `publish_to: none` を置けば止まるが、pub.dev の採点は既定のブランチ（main）の pubspec を読み、`publish_to` があるとリポジトリを検証できないとして 10 点引く。そのため置かない。
 
-1. `git checkout X` して、`flutter/luster/darwin/luster/Package.swift` が `url:` と `checksum:` を持ち、`flutter/luster/pubspec.yaml` に `publish_to` が無いことを確かめる。
+1. `git checkout X` して、`flutter/luster/darwin/luster/Package.swift` が `url:` と `checksum:` を持ち、`flutter/luster/pubspec.yaml` の `version` が X であることを確かめる。
 2. `cd flutter/luster && fvm flutter pub publish --dry-run`。警告は `flutter_rust_bridge` の固定 1 件だけであること（警告があると終了コードは 65）。
 3. ユーザーに実行してもらう:
    ```sh
    cd flutter/luster && fvm dart pub publish
    ```
-   警告の確認には `y`。初回はブラウザで Google 認証。
+   警告の確認には `y`。初回はブラウザで Google 認証。入力欄の `!` で実行すると `y` を返せず「Package upload canceled.」で終わる（何も公開されない）。そのときは自分のターミナルで実行してもらうか、確認を飛ばす `--force` を付けて `!` で実行してもらう。
 4. `git checkout main` で戻る。
 5. 確認: `curl -s https://pub.dev/api/packages/luster` の `latest.version` が X。
 
@@ -122,7 +122,7 @@ pub.dev は、手元の dry run では出ない指摘で **サーバー側で拒
 - `LICENSE` file contains generic TODO（パッケージの LICENSE がテンプレートのままだった。今はトップの LICENSE へのリンク）
 - Invalid `topics` value（topic は英小文字で始まり、英小文字・数字・ハイフンだけ）
 
-この場合、pub.dev の X はタグより後のコミットから出ることになる。そのコミットでも `flutter/luster/darwin/luster/Package.swift` をタグのもの（`git show X:flutter/luster/darwin/luster/Package.swift`）にし、pubspec の `publish_to: none` とその上のコメントを外してから出す（どちらもコミットはしない。出したら `git checkout` で戻す）。違いをユーザーに伝える。
+この場合、pub.dev の X はタグより後のコミットから出ることになる。そのコミットでも `flutter/luster/darwin/luster/Package.swift` をタグのもの（`git show X:flutter/luster/darwin/luster/Package.swift`）にしてから出す（コミットはしない。出したら `git checkout` で戻す）。違いをユーザーに伝える。
 
 ## 7. macOS 用アプリ
 
@@ -139,7 +139,7 @@ gh release upload X Apps/LusterMac/.build/Luster-X-macos.zip
 - 出力の `"status":"Accepted"`、`The staple and validate action worked!`、`source=Notarized Developer ID`
 - 失敗すると Apple のログを表示して止まる。hardened runtime で拒否されるものがないかを読む
 - 添付のあと、`https://github.com/famio/Luster/releases/download/X/Luster-X-macos.zip` がログインなしで 200
-- 必要なら、zip を展開して `xattr -w com.apple.quarantine "0081;$(printf %x $(date +%s));Safari;" Luster.app` でダウンロードの印を付け、`spctl --assess --type execute --verbose=2 Luster.app` が `accepted`
+- 必要なら、zip を `ditto -x -k` で展開して `xattr -w com.apple.quarantine "0081;$(printf %x $(date +%s));Safari;" Luster.app` でダウンロードの印を付け、`spctl --assess --type execute --verbose=2 Luster.app` が `accepted`。`unzip` で展開すると中身が崩れて「a sealed resource is missing or invalid」になる（zip の問題ではない）
 
 ## 8. 仕上げ
 
@@ -158,7 +158,7 @@ gh release upload X Apps/LusterMac/.build/Luster-X-macos.zip
   git tag -d X
   ```
   zip はビルドし直すのでチェックサムも変わる。main には `chore(release): X` の組がもう 1 つ増えるが、公開済みの main の履歴は書き換えない。
-- **5 より後**: GitHub のリリースと Maven Central は取り消せず、タグも作り直せない。直すなら次のパッチ版で出す。pub.dev だけ未公開なら、直した main から出してよい（`darwin/luster/Package.swift` はタグのものにし、`publish_to: none` を外す。タグとの違いを伝える）。
+- **5 より後**: GitHub のリリースと Maven Central は取り消せず、タグも作り直せない。直すなら次のパッチ版で出す。pub.dev だけ未公開なら、直した main から出してよい（`darwin/luster/Package.swift` はタグのものにする。タグとの違いを伝える）。
 
 ## 参考
 

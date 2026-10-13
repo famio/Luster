@@ -28,13 +28,6 @@ URL="https://github.com/$REPO/releases/download/$VERSION/LusterFFI.xcframework.z
 FLUTTER_MANIFEST="flutter/luster/darwin/luster/Package.swift"
 FLUTTER_ZIP="rust/target/flutter/luster_dart.xcframework.zip"
 FLUTTER_URL="https://github.com/$REPO/releases/download/$VERSION/luster_dart.xcframework.zip"
-# Keeps pub.dev from taking the plugin anywhere but from a tag, whose manifest
-# names the release's zip.
-UNPUBLISHABLE='# Published only from a tag. Here darwin/luster/Package.swift points at the
-# engine a checkout builds, which a published package would not carry;
-# Scripts/release.sh points it at the release'"'"'s zip and takes these lines out.
-publish_to: none
-'
 
 if [ -n "$(git status --porcelain)" ]; then
     echo "the working tree has changes; commit or stash them first" >&2
@@ -45,11 +38,6 @@ fi
 if ! grep -q 'path: "rust/target/apple/LusterFFI.xcframework"' Package.swift ||
    ! grep -q 'path: "luster_dart.xcframework"' "$FLUTTER_MANIFEST"; then
     echo "a Package.swift does not point at the local XCFramework; release from a branch that does" >&2
-    exit 1
-fi
-if ! python3 -c 'import sys; sys.exit(sys.argv[1] not in open(sys.argv[2]).read())' \
-        "$UNPUBLISHABLE" flutter/luster/pubspec.yaml; then
-    echo "flutter/luster/pubspec.yaml does not keep pub.dev out; release from a branch that does" >&2
     exit 1
 fi
 
@@ -130,14 +118,6 @@ PY
 }
 point Package.swift ffi LusterFFI "$URL" "$CHECKSUM"
 point "$FLUTTER_MANIFEST" engine luster_dart "$FLUTTER_URL" "$FLUTTER_CHECKSUM"
-# With the manifest naming the zip, the tag's package may go to pub.dev.
-python3 - "$UNPUBLISHABLE" flutter/luster/pubspec.yaml <<'PY'
-import sys
-block, pubspec = sys.argv[1:]
-s = open(pubspec).read()
-assert s.count(block) == 1, pubspec
-open(pubspec, 'w').write(s.replace(block, ''))
-PY
 
 if [ "$DRY" = 1 ]; then
     say "dry run"
@@ -169,17 +149,8 @@ git tag -a "$VERSION" -m "Luster $VERSION"
 say "pointing the Package.swift files back at the local engine"
 git show "HEAD~1:Package.swift" > Package.swift
 git show "HEAD~1:$FLUTTER_MANIFEST" > "$FLUTTER_MANIFEST"
-# The block goes back where it was, after the version.
-python3 - "$UNPUBLISHABLE" flutter/luster/pubspec.yaml <<'PY'
-import re, sys
-block, pubspec = sys.argv[1:]
-s = open(pubspec).read()
-s, n = re.subn(r'^(version: .*\n)', lambda m: m.group(1) + block, s, count=1, flags=re.M)
-assert n == 1, pubspec
-open(pubspec, 'w').write(s)
-PY
 git commit -q -m "chore: build against the local engine again after $VERSION" \
-    Package.swift "$FLUTTER_MANIFEST" flutter/luster/pubspec.yaml
+    Package.swift "$FLUTTER_MANIFEST"
 
 cat <<EOF
 
@@ -194,7 +165,8 @@ The zips have to be these: the engine never builds to the same bytes twice,
 and the Package.swift files name these ones' checksums. Run the workflow with
 publish=false first to check everything without releasing anything; with
 publish=true it takes the draft public. pub.dev and the macOS app come last,
-by hand. pub.dev from the tag, whose Package.swift names the release's zip:
+by hand. pub.dev from the tag, whose Package.swift names the release's zip (on
+the branch it names an engine the package does not carry; nothing stops that):
   git checkout "$VERSION" && (cd flutter/luster && dart pub publish); git checkout -
   Apps/LusterMac/notarize.sh
   gh release upload "$VERSION" "Apps/LusterMac/.build/Luster-$VERSION-macos.zip"
