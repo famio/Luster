@@ -33,6 +33,7 @@ and in the app, add `mavenLocal()` to the repositories and depend on
 cargo test --manifest-path rust/Cargo.toml   # the engine
 swift test                                   # the Swift package
 Scripts/parity.sh                            # what the engine makes of the fixtures
+Scripts/parity.sh wasm                       # the same, built for WebAssembly (Node 22)
 Scripts/format.sh --lint                     # the Swift's and the Dart's formatting
 (cd android && ./gradlew lint)               # Android Lint, over the Kotlin and the resources
 ```
@@ -48,10 +49,11 @@ it must make of them: the regions it reads, the cells before and after merging, 
 pieces struck with the lines plated and left in the metal, with their areas, bounds and
 colours, and a hash of every GLB it writes. Anything that moves in one of them is
 reported, down to a byte of a badge. CI strikes the same documents on Linux, on both
-architectures, against the same hashes: a badge has to be the same bytes wherever it is
-made. That is why the engine's maths goes through `libm` rather than the platform's own
-(`luster-core/src/math.rs`; clippy refuses the std functions). `luster golden <dir>
-<svg>…` writes the dumps, for a change meant to move them or a document added later.
+architectures, and as WebAssembly, against the same hashes: a badge has to be the same
+bytes wherever it is made. That is why the engine's maths goes through `libm` rather
+than the platform's own (`luster-core/src/math.rs`; clippy refuses the std functions).
+`luster golden <dir> <svg>…` writes the dumps, for a change meant to move them or a
+document added later.
 
 Three of the documents are heavier than the rest on purpose — a scene under gradients,
 a wheel of thirty flat colours under a wash, and a wreath of small pieces with thin line

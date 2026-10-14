@@ -46,6 +46,19 @@ jobs:
         working-directory: rust
       - run: Scripts/parity.sh
 
+  # The same documents struck by the engine built for WebAssembly, as the web
+  # strikes them.
+  same-badges-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: rustup show active-toolchain || rustup toolchain install
+        working-directory: rust
+      - run: Scripts/parity.sh wasm
+
   swift:
     runs-on: macos-latest
     steps:
