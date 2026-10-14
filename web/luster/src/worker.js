@@ -74,6 +74,21 @@ const ops = {
     return engine.version();
   },
 
+  /** What a view lights every badge with: the panorama it reflects, what a
+   *  diffuse surface receives from it, and the reverse's sandblast. */
+  studio({ irradianceSize }) {
+    const read = (texture) => {
+      const out = { width: texture.width, height: texture.height, rgba: texture.rgba };
+      texture.free();
+      return out;
+    };
+    const panorama = read(engine.showcaseEnvironment());
+    const irradiance = read(engine.showcaseIrradiance(irradianceSize));
+    const sandblast = read(engine.sandblast());
+    const transfer = [panorama, irradiance, sandblast].map((t) => t.rgba.buffer);
+    return [{ panorama, irradiance, sandblast }, transfer];
+  },
+
   metals() {
     const read = (make) => {
       const c = make();

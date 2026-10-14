@@ -77,9 +77,9 @@ export class Engine {
     this.ready.then(() => this.call('free', { id })).catch(() => {});
   }
 
-  async run(op) {
+  async run(op, args) {
     await this.ready;
-    return this.call(op);
+    return this.call(op, args);
   }
 
   terminate() {
@@ -91,4 +91,24 @@ export class Engine {
     for (const { reject } of this.calls.values()) reject(error);
     this.calls.clear();
   }
+}
+
+/** A worker of its own for what is not a mint. */
+let helper;
+
+/** Asks the helper; one that fails is ended, and the next ask starts another. */
+export async function ask(op, args) {
+  const asked = (helper ??= new Engine());
+  try {
+    return await asked.run(op, args);
+  } catch (e) {
+    // Not one started since, after this one was ended.
+    if (helper === asked) endHelper();
+    throw e;
+  }
+}
+
+export function endHelper() {
+  helper?.terminate();
+  helper = undefined;
 }

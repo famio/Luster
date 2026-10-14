@@ -9,6 +9,10 @@
     ".": {
       "types": "./src/index.d.ts",
       "default": "./src/index.js"
+    },
+    "./view": {
+      "types": "./src/view.d.ts",
+      "default": "./src/view.js"
     }
   },
   "files": [
@@ -17,8 +21,21 @@
     "engine/luster_wasm.js",
     "engine/luster_wasm_bg.wasm"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/view.js"
+  ],
   "scripts": {
     "test": "node --test test/*.test.js"
+  },
+  "peerDependencies": {
+    "three": "^0.186.0"
+  },
+  "peerDependenciesMeta": {
+    "three": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "three": "0.186.1"
   }
 }

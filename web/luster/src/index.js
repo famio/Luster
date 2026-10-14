@@ -1,20 +1,10 @@
 // Entry points to the engine, for the web: badges struck in workers, off the
 // thread that draws.
-import { Engine, Gone, compile } from './engine.js';
+import { Engine, Gone, ask as askHelper, compile, endHelper } from './engine.js';
+import { LusterError, engineError } from './errors.js';
 import { Mints } from './mints.js';
 
-/** Why a badge could not be made: the document, its source, or the engine. */
-export class LusterError extends Error {
-  /**
-   * @param {string} kind
-   * @param {string} message
-   */
-  constructor(kind, message) {
-    super(message);
-    this.name = 'LusterError';
-    this.kind = kind;
-  }
-}
+export { LusterError };
 
 /** Larger documents are refused before they are read in full. */
 const MAXIMUM_BYTES = 20 << 20;
@@ -22,15 +12,10 @@ const MAXIMUM_BYTES = 20 << 20;
 let mints;
 const page = () => (mints ??= new Mints({ spawn: () => new Engine() }));
 
-/** A worker of its own for what is not a mint. */
-let helper;
 async function ask(op) {
-  helper ??= new Engine();
   try {
-    return await helper.run(op);
+    return await askHelper(op);
   } catch (e) {
-    helper?.terminate();
-    helper = undefined;
     throw engineError(e);
   }
 }
@@ -93,8 +78,7 @@ export const Luster = {
   close() {
     mints?.close();
     mints = undefined;
-    helper?.terminate();
-    helper = undefined;
+    endHelper();
   },
 };
 
@@ -184,10 +168,4 @@ async function fetchBytes(url, signal) {
 
 function tooLarge(size) {
   return new LusterError('tooLarge', `the document is ${size} bytes; at most ${MAXIMUM_BYTES} are read`);
-}
-
-function engineError(e) {
-  if (e instanceof LusterError) return e;
-  if (e?.name === 'AbortError') return e;
-  return new LusterError(e?.kind ?? 'engineFailure', e?.message ?? String(e));
 }
