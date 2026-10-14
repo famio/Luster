@@ -271,14 +271,26 @@ pub(super) fn band(from: &Contours, from_z: f32, to: &Contours, to_z: f32, out: 
         if n < 3 || inner.len() != n {
             continue;
         }
+        // Each edge's direction along the outline. An inset pinches a fold
+        // shut, leaving edges of no length: the inner ring's edge gives the
+        // way where the outer's has none, and where neither has a length the
+        // band has no width there to build.
+        let runs: Vec<Option<(f64, f64)>> = (0..n)
+            .map(|i| {
+                let j = (i + 1) % n;
+                [outer[j] - outer[i], inner[j] - inner[i]]
+                    .into_iter()
+                    .map(|edge| (edge, math::length(edge)))
+                    .find(|(_, len)| *len > 1e-12)
+                    .map(|(edge, len)| (edge.x / len, edge.y / len))
+            })
+            .collect();
         // Each edge's way out of the material, across the edge.
         let outward: Vec<[f32; 2]> = (0..n)
             .map(|i| {
-                let j = (i + 1) % n;
-                let edge = outer[j] - outer[i];
-                let len = math::length(edge).max(1e-12);
-                let across = [(edge.y / len) as f32, (-edge.x / len) as f32];
-                let towards = outer[i] - inner[j];
+                let Some((x, y)) = runs[i] else { return [0.0, 0.0] };
+                let across = [y as f32, -x as f32];
+                let towards = outer[i] - inner[(i + 1) % n];
                 if f64::from(across[0]) * towards.x + f64::from(across[1]) * towards.y < 0.0 {
                     [-across[0], -across[1]]
                 } else {
@@ -288,9 +300,13 @@ pub(super) fn band(from: &Contours, from_z: f32, to: &Contours, to_z: f32, out: 
             .collect();
         // Shared across a vertex where the outline turns gently, as a side
         // wall's are: flat per edge, a curve shows every edge it was cut into.
-        // A sharper corner keeps its crease, each face its own normal.
+        // A sharper corner keeps its crease, each face its own normal. The
+        // edges either side are the nearest with a direction, passing over
+        // any a pinch left without.
         let smooth = |vertex: usize| -> Option<[f32; 2]> {
-            let (before, after) = (outward[(vertex + n - 1) % n], outward[vertex]);
+            let before = (1..=n).map(|k| (vertex + n - k) % n).find(|&i| runs[i].is_some())?;
+            let after = (0..n).map(|k| (vertex + k) % n).find(|&i| runs[i].is_some())?;
+            let (before, after) = (outward[before], outward[after]);
             (turn(before, after) < SMOOTH_TURN).then(|| blend(before, after))
         };
         // The band's own slope gives the normal, out across the step and up;
@@ -305,9 +321,8 @@ pub(super) fn band(from: &Contours, from_z: f32, to: &Contours, to_z: f32, out: 
             let j = (i + 1) % n;
             let (a, b) = (outer[i], outer[j]);
             let (c, d) = (inner[j], inner[i]);
-            let edge = b - a;
-            let len = math::length(edge).max(1e-12);
-            let t = [(edge.x / len) as f32, (edge.y / len) as f32, 0.0, 1.0];
+            let Some((x, y)) = runs[i] else { continue };
+            let t = [x as f32, y as f32, 0.0, 1.0];
             let flat = normal(i, outward[i]);
             let ni = smooth(i).map_or(flat, |way| normal(i, way));
             let nj = smooth(j).map_or(flat, |way| normal(j, way));

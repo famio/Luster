@@ -316,6 +316,27 @@ mod tests {
         assert!(face > 0.0 && face < 4.0, "{face}");
     }
 
+    /// Where the roll's insets fold a tight corner, they pinch its edges to no
+    /// length, leaving them no direction of their own; every vertex still has
+    /// a normal and a tangent of unit length.
+    #[test]
+    fn a_roll_pinched_shut_keeps_its_normals_and_tangents_whole() {
+        let corners = kurbo::RoundedRect::new(-1.0, -1.0, 1.0, 1.0, 0.05);
+        let shape = contours(&kurbo::Shape::to_path(&corners, 1e-6), TOLERANCE);
+        let mut mesh = MeshBuilder::new();
+        extrude(&shape, Slab::new(0.1, -0.1, Faces::ALL).rolled(0.15), &mut mesh).unwrap();
+        let read = |i: usize, k: usize| {
+            let o = i * VERTEX_STRIDE + 4 * k;
+            f32::from_le_bytes(mesh.vertices[o..o + 4].try_into().unwrap())
+        };
+        for i in 0..mesh.vertex_count() as usize {
+            let length = |k: usize| (0..3).map(|d| read(i, k + d) * read(i, k + d)).sum::<f32>().sqrt();
+            let (normal, tangent) = (length(3), length(8));
+            assert!((normal - 1.0).abs() < 1e-5, "vertex {i}: a normal {normal} long");
+            assert!((tangent - 1.0).abs() < 1e-5, "vertex {i}: a tangent {tangent} long");
+        }
+    }
+
     /// A dome covers its region whole, every triangle facing up, even where a
     /// sharp notch is narrower than its curve: no gap for what is below to
     /// show through, and nothing inside out.
