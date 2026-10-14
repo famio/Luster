@@ -1,4 +1,4 @@
-# luster (web)
+# @famio/luster
 
 The Luster engine compiled to WebAssembly: an SVG struck into a 3D enamel badge, in a
 worker, off the thread that draws. The badges are the same bytes the engine makes on
@@ -13,7 +13,7 @@ Scripts/build-wasm.sh
 ## Use
 
 ```js
-import { Luster, LusterError } from 'luster';
+import { Luster, LusterError } from '@famio/luster';
 
 const badge = await Luster.mint(new URL('/badge.svg', location.href));
 badge.submeshes;   // interleaved Float32Array vertices and Uint32Array indices

@@ -1,5 +1,5 @@
 {
-  "name": "luster",
+  "name": "@famio/luster",
   "version": "0.3.0",
   "private": true,
   "description": "Turns an SVG into a 3D enamel badge, struck in a worker by the Luster engine compiled to WebAssembly.",
