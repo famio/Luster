@@ -10,7 +10,13 @@ static SET: Once = Once::new();
 
 /// Sizes the thread pool the engine's parallel passes run on. Called at the
 /// start of a mint; after the first it costs nothing.
+///
+/// WebAssembly without threads is left to rayon: a pool sized here would fail
+/// to spawn and take the place of rayon's own, which runs on the caller.
 pub fn ready() {
+    if cfg!(all(target_family = "wasm", not(target_feature = "atomics"))) {
+        return;
+    }
     SET.call_once(|| {
         let cores = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(2);
         let _ = rayon::ThreadPoolBuilder::new()
