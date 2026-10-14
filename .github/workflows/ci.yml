@@ -47,7 +47,7 @@ jobs:
       - run: Scripts/parity.sh
 
   # The same documents struck by the engine built for WebAssembly, as the web
-  # strikes them.
+  # strikes them, and the web package's own tests.
   same-badges-wasm:
     runs-on: ubuntu-latest
     steps:
@@ -58,6 +58,8 @@ jobs:
       - run: rustup show active-toolchain || rustup toolchain install
         working-directory: rust
       - run: Scripts/parity.sh wasm
+      - run: npm test
+        working-directory: web/luster
 
   swift:
     runs-on: macos-latest

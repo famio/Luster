@@ -1,0 +1,24 @@
+{
+  "name": "luster",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Turns an SVG into a 3D enamel badge, struck in a worker by the Luster engine compiled to WebAssembly.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    }
+  },
+  "files": [
+    "src",
+    "README.md",
+    "engine/luster_wasm.js",
+    "engine/luster_wasm_bg.wasm"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}
