@@ -913,6 +913,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "luster-wasm"
+version = "0.3.0"
+dependencies = [
+ "js-sys",
+ "luster-core",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "luster_dart"
 version = "0.3.0"
 dependencies = [

@@ -1,0 +1,17 @@
+[package]
+name = "luster-wasm"
+description = "wasm-bindgen surface of luster-core for the web."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+name = "luster_wasm"
+
+[dependencies]
+luster-core.workspace = true
+# The CLI that writes the JavaScript side must be this same version.
+wasm-bindgen = "=0.2.128"
+js-sys = "0.3.105"

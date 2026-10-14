@@ -5,6 +5,7 @@ members = [
     "crates/luster-ffi",
     "crates/luster-cli",
     "crates/luster-dart",
+    "crates/luster-wasm",
     "uniffi-bindgen",
 ]
 
