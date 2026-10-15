@@ -21,29 +21,30 @@
         <p class="placeholder" id="placeholder" data-text="placeholder"></p>
         <div class="bottom">
           <span class="file" id="file"></span>
-          <label class="open">
-            <input type="file" id="pick" accept=".svg,image/svg+xml">
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10.5V2.2M5 5l3-3 3 3M3 8.5v4.3c0 .4.3.7.7.7h8.6c.4 0 .7-.3.7-.7V8.5"/></svg>
-            <span data-text="open"></span>
-          </label>
+          <button class="open" id="open" data-text="open"></button>
+          <input type="file" id="pick" accept=".svg,image/svg+xml" hidden>
         </div>
         <div class="veil" id="veil"><span data-text="drop"></span></div>
       </section>
       <aside class="sidebar">
         <section>
-          <h2 data-text="metal"></h2>
-          <div class="swatches" id="swatches"></div>
+          <h2 id="metal-title" data-text="metal"></h2>
+          <div class="choices" role="radiogroup" aria-labelledby="metal-title">
+            <label><input type="radio" autocomplete="off" name="metal" value="gold" checked><span data-text="gold"></span></label>
+            <label><input type="radio" autocomplete="off" name="metal" value="silver"><span data-text="silver"></span></label>
+            <label><input type="radio" autocomplete="off" name="metal" value="copper"><span data-text="copper"></span></label>
+          </div>
         </section>
         <section>
           <h2 data-text="lighting"></h2>
-          <label class="switch"><span data-text="shine"></span><input type="checkbox" role="switch" id="shine" checked></label>
+          <label><input type="checkbox" autocomplete="off" switch id="shine" checked><span data-text="shine"></span></label>
         </section>
         <section>
           <h2 data-text="lines"></h2>
-          <label class="switch"><span data-text="metalLines"></span><input type="checkbox" role="switch" id="metal-lines"></label>
+          <label><input type="checkbox" autocomplete="off" switch id="metal-lines"><span data-text="metalLines"></span></label>
         </section>
         <section class="end">
-          <button class="export" id="export" disabled data-text="export"></button>
+          <button class="export primary" id="export" disabled data-text="export"></button>
         </section>
       </aside>
     </main>
@@ -51,7 +52,7 @@
       <form method="dialog">
         <h3 id="alert-title"></h3>
         <p id="alert-message"></p>
-        <button value="ok" data-text="ok"></button>
+        <button class="primary" value="ok" data-text="ok"></button>
       </form>
     </dialog>
   </body>

@@ -6,17 +6,18 @@
   --sidebar: #f8f7f5;
   --hairline: rgb(0 0 0 / 0.08);
   --sidebar-edge: rgb(0 0 0 / 0.09);
-  --swatch-edge: rgb(0 0 0 / 0.12);
-  /* Selection rings and switches; deeper on light, where pale gold fades. */
-  --accent: #c08a2e;
-  --on-accent: #fff;
+  --drop-edge: rgb(192 138 46 / 0.55);
   --section-label: #85858d;
   --title-text: #707078;
   --file-text: #8e8e95;
   --text: #1d1d1f;
   --drop-veil: rgb(242 241 238 / 0.8);
   --drop-text: #7a5a22;
-  --control: rgb(0 0 0 / 0.06);
+  --button: rgb(0 0 0 / 0.06);
+  --button-hover: rgb(0 0 0 / 0.1);
+  /* The browser's own, where it names it: the switches and the radios have it. */
+  --accent: #0075ff;
+  --on-accent: #fff;
   --sidebar-width: 286px;
   --title-height: 44px;
   color-scheme: light dark;
@@ -29,17 +30,21 @@
     --sidebar: #0e0e11;
     --hairline: rgb(255 255 255 / 0.06);
     --sidebar-edge: rgb(255 255 255 / 0.07);
-    --swatch-edge: rgb(255 255 255 / 0.14);
-    --accent: #ffcc85;
-    --on-accent: #1b1305;
+    --drop-edge: rgb(255 204 133 / 0.55);
     --section-label: #6c6c75;
     --title-text: #83838c;
     --file-text: #57575e;
     --text: #e5e5e7;
     --drop-veil: rgb(8 8 10 / 0.74);
     --drop-text: #e0cfae;
-    --control: rgb(255 255 255 / 0.08);
+    --button: rgb(255 255 255 / 0.1);
+    --button-hover: rgb(255 255 255 / 0.15);
   }
+}
+
+/* White on it whatever the browser says: Safari names black. */
+@supports (color: AccentColor) {
+  :root { --accent: AccentColor; }
 }
 
 * { box-sizing: border-box; }
@@ -149,22 +154,23 @@ luster-view {
   letter-spacing: 0.4px;
   color: var(--file-text);
 }
-.open {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex: none;
-  padding: 7px 14px;
-  border-radius: 7px;
-  background: var(--control);
+.open { flex: none; pointer-events: auto; }
+
+button {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--button);
+  color: var(--text);
+  font: inherit;
   font-size: 13px;
   cursor: pointer;
-  pointer-events: auto;
 }
-.open:hover { filter: brightness(0.96); }
-.open:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
-.open input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-.open svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+button:hover:not(:disabled) { background: var(--button-hover); }
+button:disabled { opacity: 0.4; cursor: default; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.primary { background: var(--accent); color: var(--on-accent); }
+button.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.08); }
 
 .veil {
   position: absolute;
@@ -182,7 +188,7 @@ luster-view {
   width: 210px;
   height: 210px;
   border-radius: 16px;
-  outline: 1px dashed color-mix(in srgb, var(--accent) 55%, transparent);
+  outline: 1px dashed var(--drop-edge);
   outline-offset: -1px;
   font-size: 12px;
   letter-spacing: 0.7px;
@@ -222,75 +228,15 @@ luster-view {
   color: var(--section-label);
 }
 
-.swatches { display: flex; gap: 9px; padding: 4px; margin: -4px; }
-.swatch {
-  position: relative;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: 1px solid var(--swatch-edge);
-  border-radius: 50%;
-  cursor: pointer;
-}
-.swatch[aria-checked="true"]::after {
-  content: "";
-  position: absolute;
-  inset: -4.5px;
-  border: 1.5px solid var(--accent);
-  border-radius: 50%;
-}
-.swatch:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; }
-
-.switch {
+.choices { display: flex; flex-direction: column; gap: 6px; }
+.sidebar label {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  cursor: pointer;
-}
-.switch input {
-  appearance: none;
-  position: relative;
-  flex: none;
-  width: 32px;
-  height: 18px;
-  margin: 0;
-  border-radius: 9px;
-  background: var(--control);
-  box-shadow: inset 0 0 0 1px var(--hairline);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.switch input::after {
-  content: "";
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
-  transition: transform 0.15s;
-}
-.switch input:checked { background: var(--accent); }
-.switch input:checked::after { transform: translateX(14px); }
-.switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-.export {
-  width: 100%;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 7px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font: inherit;
+  gap: 6px;
   font-size: 13px;
-  cursor: pointer;
 }
-.export:hover:not(:disabled) { filter: brightness(1.05); }
-.export:disabled { opacity: 0.45; cursor: default; }
-.export:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sidebar input { margin: 0; }
+.export { padding: 8px 14px; }
 
 /* Alert */
 
@@ -302,22 +248,12 @@ dialog {
   background: var(--sidebar);
   color: var(--text);
   box-shadow: 0 18px 50px rgb(0 0 0 / 0.25);
-  text-align: center;
 }
 dialog::backdrop { background: rgb(0 0 0 / 0.2); }
 dialog h3 { margin: 0 0 8px; font-size: 13px; }
-dialog p { margin: 0 0 16px; font-size: 11.5px; overflow-wrap: anywhere; }
-dialog button {
-  min-width: 80px;
-  padding: 6px 16px;
-  border: none;
-  border-radius: 6px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
+dialog p { margin: 0 0 16px; font-size: 12px; overflow-wrap: anywhere; }
+dialog form { display: flex; flex-direction: column; }
+dialog button { align-self: flex-end; min-width: 72px; }
 
 /* A phone: the stage above, the controls below it. */
 @media (max-width: 720px) {

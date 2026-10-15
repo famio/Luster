@@ -26,46 +26,10 @@ const metals = Luster.metals();
 
 // Metal
 
-const swatches = $('swatches');
-swatches.setAttribute('role', 'radiogroup');
-swatches.setAttribute('aria-label', t.metal);
-for (const name of ['gold', 'silver', 'copper']) {
-  const swatch = document.createElement('button');
-  swatch.className = 'swatch';
-  swatch.setAttribute('role', 'radio');
-  swatch.title = t[name];
-  swatch.setAttribute('aria-label', t.metalNamed(t[name]));
-  swatch.dataset.metal = name;
-  swatch.onclick = () => choose(name);
-  swatches.append(swatch);
+for (const choice of document.querySelectorAll('input[name="metal"]')) {
+  choice.onchange = () => (view.metal = metal = choice.value);
 }
-// One stop for the group; the arrows move through it.
-swatches.addEventListener('keydown', (e) => {
-  const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
-  if (!step) return;
-  e.preventDefault();
-  const all = [...swatches.children];
-  const next = all[(all.findIndex((s) => s.dataset.metal === metal) + step + all.length) % all.length];
-  choose(next.dataset.metal);
-  next.focus();
-});
-metals.then((colours) => {
-  for (const swatch of swatches.children) {
-    const { r, g, b } = colours[swatch.dataset.metal];
-    swatch.style.background = `rgb(${r * 255} ${g * 255} ${b * 255})`;
-  }
-});
-
-function choose(name) {
-  metal = name;
-  view.metal = name;
-  for (const swatch of swatches.children) {
-    const chosen = swatch.dataset.metal === name;
-    swatch.setAttribute('aria-checked', String(chosen));
-    swatch.tabIndex = chosen ? 0 : -1;
-  }
-}
-choose(metal);
+view.metal = metal;
 
 // Lighting and lines
 
@@ -75,6 +39,7 @@ $('metal-lines').onchange = (e) => (view.metalLines = e.target.checked);
 // Opening
 
 const pick = $('pick');
+$('open').onclick = () => pick.click();
 pick.onchange = () => {
   if (pick.files[0]) open(pick.files[0]);
   // The same file again is a change too.
