@@ -727,3 +727,20 @@ const Y = new THREE.Vector3(0, 1, 0);
 function sameColor(a, b) {
   return a.r === b.r && a.g === b.g && a.b === b.b && a.a === b.a;
 }
+
+/** A colour given as `#rrggbb` or `{ r, g, b }`, as sRGB from 0 to 1; null if
+ *  it is neither. */
+export function srgb(value) {
+  if (value && typeof value === 'object') return { r: +value.r, g: +value.g, b: +value.b, a: 1 };
+  const hex = typeof value === 'string' && /^#([0-9a-f]{6})$/i.exec(value.trim());
+  if (!hex) return null;
+  const n = parseInt(hex[1], 16);
+  return { r: ((n >> 16) & 255) / 255, g: ((n >> 8) & 255) / 255, b: (n & 255) / 255, a: 1 };
+}
+
+/** A metal as sRGB from 0 to 1: one of the engine's by name, or a colour;
+ *  its gold otherwise. */
+export function metalColor(metal, metals) {
+  if (typeof metal === 'string' && Object.hasOwn(metals, metal)) return metals[metal];
+  return srgb(metal) ?? metals.gold;
+}

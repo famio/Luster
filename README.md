@@ -151,6 +151,12 @@ final glb = await badge.glb(metal: LusterColor.gold);
 final still = await LusterSnapshot.image(badge, pixelSize: 512);    // ui.Image
 ```
 
+```js
+const badge = await Luster.mint(svg, { metalLines: true });
+const glb = await badge.glb();
+const still = await LusterSnapshot.image(badge, { pixelSize: 512 });  // PNG Blob
+```
+
 - **Stills** look as the view does. A list or a grid wants stills rather than a live
   view per row. A still is transparent round the badge unless it is given a
   `background` colour.

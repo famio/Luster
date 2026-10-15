@@ -73,6 +73,21 @@ canvas: a browser keeps only a few contexts a page, and a gallery of badges woul
 the first ones. The lighting is the studio every platform shares, its tone curve
 RealityKit's.
 
+## Stills
+
+```js
+import { LusterSnapshot } from '@famio/luster/snapshot';
+
+const png = await LusterSnapshot.image(badge, { pixelSize: 512, metal: 'silver' });
+image.src = URL.createObjectURL(png);
+```
+
+A still is the picture a view shows, at the resting pose unless `tilt` and `spin` say
+otherwise, as a PNG `Blob`. A list or a grid wants stills rather than a live view per
+row. It is transparent round the badge unless it is given a `background`, a `#rrggbb`
+colour or one in sRGB from 0 to 1. `LusterSnapshot.fromSource` mints the badge first,
+taking the mint's options too. It draws with three.js, as the view does.
+
 ## Checks
 
 ```sh

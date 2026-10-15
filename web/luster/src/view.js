@@ -4,7 +4,7 @@
 // about it; a double tap puts it back.
 import { Luster } from './index.js';
 import { LusterError } from './errors.js';
-import { Stage, studio as setUpStudio } from './stage.js';
+import { Stage, metalColor, studio as setUpStudio } from './stage.js';
 
 const TEMPLATE = `
 <style>
@@ -794,24 +794,8 @@ export class LusterView extends HTMLElement {
   }
 }
 
-/** A metal as sRGB from 0 to 1: one of the engine's by name, or a colour. */
 function sameKey(a, b) {
   return a !== null && a.length === b.length && a.every((x, i) => x === b[i]);
-}
-
-function metalColor(metal, metals) {
-  if (metal && typeof metal === 'object') {
-    return { r: +metal.r, g: +metal.g, b: +metal.b, a: 1 };
-  }
-  if (typeof metal === 'string') {
-    if (Object.hasOwn(metals, metal)) return metals[metal];
-    const hex = /^#([0-9a-f]{6})$/i.exec(metal.trim());
-    if (hex) {
-      const n = parseInt(hex[1], 16);
-      return { r: ((n >> 16) & 255) / 255, g: ((n >> 8) & 255) / 255, b: (n & 255) / 255, a: 1 };
-    }
-  }
-  return metals.gold;
 }
 
 function median(values) {

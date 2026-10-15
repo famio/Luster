@@ -13,6 +13,10 @@
     "./view": {
       "types": "./src/view.d.ts",
       "default": "./src/view.js"
+    },
+    "./snapshot": {
+      "types": "./src/snapshot.d.ts",
+      "default": "./src/snapshot.js"
     }
   },
   "files": [
