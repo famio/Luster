@@ -23,7 +23,7 @@ case "${1:-}" in
         ;;
     wasm)
         # Not in rust-toolchain.toml, which everyone building the engine reads.
-        (cd "$ROOT/rust" && rustup target add wasm32-wasip1 > /dev/null 2>&1 &&
+        (cd "$ROOT/rust" && rustup target add wasm32-wasip1 > /dev/null &&
             cargo build --release --quiet -p luster-cli --target wasm32-wasip1)
         LUSTER=(node --no-warnings "$ROOT/Scripts/wasi.mjs" "$ROOT/rust/target/wasm32-wasip1/release/luster.wasm")
         ;;
