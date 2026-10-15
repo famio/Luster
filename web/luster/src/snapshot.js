@@ -3,7 +3,7 @@
 // each badge would cost far more than the picture is worth.
 import { Luster } from './index.js';
 import { LusterError } from './errors.js';
-import { Stage, metalColor, srgb, studio as setUpStudio } from './stage.js';
+import { Stage, lightingOf, metalColor, srgb, studio as setUpStudio } from './stage.js';
 
 export const LusterSnapshot = {
   /**
@@ -14,10 +14,13 @@ export const LusterSnapshot = {
    * coverage.
    */
   async image(badge, { metal, lighting, tilt, spin, pixelSize = 768, background } = {}) {
+    if (!Array.isArray(badge?.submeshes)) throw new TypeError('a still is of a badge Luster.mint made');
     if (!Number.isInteger(pixelSize) || pixelSize <= 0) {
       throw new RangeError(`a still needs pixels: ${pixelSize}`);
     }
     const studio = await setUpStudio();
+    const largest = studio.renderer.capabilities.maxTextureSize;
+    if (pixelSize > largest) throw new RangeError(`this browser draws at most ${largest} pixels across, not ${pixelSize}`);
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = pixelSize;
     const context = canvas.getContext('2d');
@@ -25,7 +28,7 @@ export const LusterSnapshot = {
     try {
       stage.show(badge, {
         metal: metalColor(metal, studio.metals),
-        lighting: lighting === 'off' ? 'off' : 'showcase',
+        lighting: lightingOf(lighting),
       });
       stage.pose(tilt ?? studio.handling.restingTilt, spin ?? studio.handling.restingSpin);
       if (!stage.draw(context, pixelSize, pixelSize)) {
@@ -33,6 +36,8 @@ export const LusterSnapshot = {
       }
     } finally {
       stage.dispose();
+      // The views on the page grow the frame back to what they need.
+      studio.shrink();
     }
     const behind = srgb(background);
     if (behind) {
@@ -48,6 +53,7 @@ export const LusterSnapshot = {
   /** The same, for the badge `source` strikes with `options`. */
   async fromSource(source, { metalLines, withoutHiddenFaces, signal, ...still } = {}) {
     const badge = await Luster.mint(source, { metalLines, withoutHiddenFaces, signal });
+    signal?.throwIfAborted();
     return LusterSnapshot.image(badge, still);
   },
 };

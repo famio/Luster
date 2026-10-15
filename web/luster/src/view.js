@@ -4,7 +4,7 @@
 // about it; a double tap puts it back.
 import { Luster } from './index.js';
 import { LusterError } from './errors.js';
-import { Stage, metalColor, studio as setUpStudio } from './stage.js';
+import { Stage, lightingOf, metalColor, studio as setUpStudio } from './stage.js';
 
 const TEMPLATE = `
 <style>
@@ -18,6 +18,8 @@ const TEMPLATE = `
     -webkit-user-select: none;
     contain: content;
   }
+  /* Not zoomable, a pinch is the page's; a drag still turns the badge. */
+  :host([zoomable="false"]) { touch-action: pinch-zoom; }
   :host([hidden]) { display: none; }
   canvas { display: block; width: 100%; height: 100%; }
   .placeholder {
@@ -76,13 +78,13 @@ const reducedMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)'
  * `minting`, or `failed`. A badge struck later takes the place of the one on
  * screen without it.
  *
- * Fires `statechange` on every change: minting, ready with a badge, failed,
- * or idle without a source.
+ * Fires `statechange` each time it reports a state, a second mint's
+ * `minting` too: minting, ready with a badge, failed, or idle without a
+ * source.
  */
 export class LusterView extends HTMLElement {
   static observedAttributes = ['src', 'metal', 'lighting', 'metal-lines', 'without-hidden-faces', 'zoomable'];
 
-  #shadow;
   #canvas;
   #context;
   #placeholder;
@@ -151,10 +153,10 @@ export class LusterView extends HTMLElement {
 
   constructor() {
     super();
-    this.#shadow = this.attachShadow({ mode: 'open' });
-    this.#shadow.innerHTML = TEMPLATE;
-    this.#canvas = this.#shadow.querySelector('canvas');
-    this.#placeholder = this.#shadow.querySelector('.placeholder');
+    const shadow = this.attachShadow({ mode: 'open' });
+    shadow.innerHTML = TEMPLATE;
+    this.#canvas = shadow.querySelector('canvas');
+    this.#placeholder = shadow.querySelector('.placeholder');
     this.addEventListener('pointerdown', (e) => this.#down(e));
     this.addEventListener('pointermove', (e) => this.#move(e));
     this.addEventListener('pointerup', (e) => this.#up(e));
@@ -195,7 +197,11 @@ export class LusterView extends HTMLElement {
   }
 
   set metal(value) {
-    if (typeof value === 'string') {
+    if (value === null || value === undefined) {
+      this.#metal = null;
+      this.removeAttribute('metal');
+      this.#appear();
+    } else if (typeof value === 'string') {
       this.#metal = null;
       this.setAttribute('metal', value);
       // The same string as before changes no attribute, but may replace a
@@ -212,7 +218,7 @@ export class LusterView extends HTMLElement {
   /** `showcase`, the studio the badge is made for, or `off`: lamps alone,
    *  for looking at its shape. */
   get lighting() {
-    return this.getAttribute('lighting') === 'off' ? 'off' : 'showcase';
+    return lightingOf(this.getAttribute('lighting'));
   }
 
   set lighting(value) {
@@ -279,6 +285,10 @@ export class LusterView extends HTMLElement {
       if (!this.#sourceSet) this.#load();
     } else if (name === 'metal-lines' || name === 'without-hidden-faces') {
       this.#load();
+    } else if (name === 'metal') {
+      // The attribute set over a colour given as an object takes its place.
+      if (value !== null) this.#metal = null;
+      this.#appear();
     } else if (name === 'zoomable') {
       if (!this.zoomable) {
         this.#pinch = null;
@@ -295,7 +305,7 @@ export class LusterView extends HTMLElement {
   connectedCallback() {
     // Set on the element before it was defined, they are its own and hide
     // the class's: set them again through it.
-    for (const name of ['source', 'src', 'metal', 'lighting', 'metalLines', 'withoutHiddenFaces', 'momentum']) {
+    for (const name of ['source', 'src', 'metal', 'lighting', 'metalLines', 'withoutHiddenFaces', 'momentum', 'zoomable']) {
       if (Object.hasOwn(this, name)) {
         const value = this[name];
         delete this[name];
@@ -358,7 +368,7 @@ export class LusterView extends HTMLElement {
   }
 
   /** Sets up the studio and the element's stage in it, and shows the badge
-   *  it has. False if the studio would not set up. */
+   *  it has. False if the studio would not set up, or the element has gone. */
   async #setUp() {
     try {
       const studio = (this.#studio = await setUpStudio());
@@ -366,7 +376,7 @@ export class LusterView extends HTMLElement {
       if (this.#stage) return true;
       this.#context ??= this.#canvas.getContext('2d');
       const stage = (this.#stage = new Stage(studio));
-      stage.onLost = () => this.#draw();
+      stage.onRestored = () => this.#draw();
       if (!this.#posed) {
         this.#posed = true;
         this.#tilt = studio.handling.restingTilt;
@@ -394,11 +404,12 @@ export class LusterView extends HTMLElement {
 
   /** What the element is asked to show: the badge it has is for this. */
   #currentKey() {
-    return [
-      this.#sourceSet ? this.#source : this.getAttribute('src'),
-      this.metalLines,
-      this.withoutHiddenFaces,
-    ];
+    return [this.#asked(), this.metalLines, this.withoutHiddenFaces];
+  }
+
+  /** `source` once set, `src` until then. */
+  #asked() {
+    return this.#sourceSet ? this.#source : this.getAttribute('src');
   }
 
   #srcURL() {
@@ -413,7 +424,7 @@ export class LusterView extends HTMLElement {
 
   /** Whether there is no source to show. */
   #empty() {
-    const source = this.#sourceSet ? this.#source : this.getAttribute('src');
+    const source = this.#asked();
     return source === null || source === undefined || source === '';
   }
 
@@ -462,6 +473,10 @@ export class LusterView extends HTMLElement {
       // A studio that would not set up is the element's failure, told once.
       if (!(await this.#studioReady) || mine !== this.#generation) return;
       this.#badge = badge;
+      // A new badge costs more to draw, or less: its turns find their pace
+      // again.
+      this.#turningScale = 1;
+      this.#tried = null;
       this.#stage?.show(badge, this.#appearance());
       this.#draw();
       this.#report('ready', badge, null);
@@ -524,6 +539,8 @@ export class LusterView extends HTMLElement {
     if (width === this.#width && height === this.#height) return;
     this.#width = width;
     this.#height = height;
+    this.#turningScale = 1;
+    this.#tried = null;
     // Drawn now, before the page is painted, so that it never shows
     // stretched.
     this.#draw();
@@ -606,9 +623,10 @@ export class LusterView extends HTMLElement {
 
   #up(e, cancelled = false) {
     this.#touches.delete(e.pointerId);
-    // A pinch ends with its fingers; one left behind does not drag.
+    // A pinch ends with its fingers; one left behind does not drag. Two
+    // still down carry it on from where they are.
     if (this.#pinch) {
-      if (this.#touches.size < 2) this.#pinch = null;
+      this.#pinch = this.#touches.size < 2 ? null : { spread: this.#spread(), zoom: this.#zoom, point: this.#under(this.#between()) };
       return;
     }
     const pointer = this.#pointer;
@@ -636,7 +654,8 @@ export class LusterView extends HTMLElement {
 
   /** A point in the view, in fractions of it from its middle. */
   #at(clientX, clientY) {
-    const box = this.getBoundingClientRect();
+    // The canvas's box: the element's, less any border and padding.
+    const box = this.#canvas.getBoundingClientRect();
     return {
       x: (clientX - box.left) / Math.max(box.width, 1) - 0.5,
       y: (clientY - box.top) / Math.max(box.height, 1) - 0.5,
@@ -694,14 +713,14 @@ export class LusterView extends HTMLElement {
     // At its size the page scrolls; closer, a slide looks about the badge.
     if (this.#zoom === 1) return;
     e.preventDefault();
-    const frame = { width: this.clientWidth * this.#zoom, height: this.clientHeight * this.#zoom };
+    const frame = { width: this.#canvas.clientWidth * this.#zoom, height: this.#canvas.clientHeight * this.#zoom };
     const look = this.#look;
     const to = { x: look.x + (e.deltaX * unit) / frame.width, y: look.y + (e.deltaY * unit) / frame.height };
     this.#see(this.#zoom, to, { x: 0, y: 0 });
   }
 
-  // Safari's own, for a trackpad; on a phone the fingers are pointers, and
-  // the page is kept from zooming either way.
+  // Safari's own, for a trackpad; on a phone the fingers are pointers. While
+  // it zooms, the page is kept from zooming.
   #gestureStart(e) {
     if (!this.zoomable) return;
     e.preventDefault();

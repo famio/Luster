@@ -22,12 +22,12 @@ export interface LusterStateChange {
  *
  * Attributes: `src`, `metal`, `lighting`, `metal-lines`,
  * `without-hidden-faces`, and `momentum` and `zoomable`, which are on unless
- * set to `"false"`. Fires `statechange` on every change.
+ * set to `"false"`. Fires `statechange` each time it reports a state.
  */
 export class LusterView extends HTMLElement {
   /** SVG text, its bytes, or a URL; over `src` once set. Null shows nothing. */
   source: LusterSource | null;
-  /** A URL, resolved against the document. */
+  /** The SVG's URL, resolved against the document when it is fetched. */
   src: string;
   /** `gold`, `silver`, `copper`, a `#rrggbb` colour, or a colour in sRGB
    *  from 0 to 1. The engine's pale gold unless given. */
@@ -60,6 +60,16 @@ export class LusterView extends HTMLElement {
     type: string,
     listener: EventListenerOrEventListenerObject,
     options?: boolean | AddEventListenerOptions,
+  ): void;
+  removeEventListener<K extends keyof LusterViewEventMap>(
+    type: K,
+    listener: (this: LusterView, event: LusterViewEventMap[K]) => unknown,
+    options?: boolean | EventListenerOptions,
+  ): void;
+  removeEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | EventListenerOptions,
   ): void;
 }
 

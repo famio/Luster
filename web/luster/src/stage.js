@@ -4,6 +4,7 @@
 // canvas, as a browser allows only a few contexts a page and loses the
 // oldest past them.
 import * as THREE from 'three';
+import { LusterError } from './errors.js';
 import init, * as engine from '../engine/luster_wasm.js';
 import { ask, compile } from './engine.js';
 
@@ -11,7 +12,7 @@ let here;
 
 /** The engine on this thread, for what a view asks of it as it draws: a few
  *  numbers, and a turn's coast every frame. Nothing here mints. */
-export function local() {
+function local() {
   return (here ??= compile()
     .then((module) => init({ module_or_path: module }))
     .then(() => engine)
@@ -22,7 +23,7 @@ export function local() {
 }
 
 /** Copies a colour out of the engine and lets go of its own. */
-export function rgba(made) {
+function rgba(made) {
   const out = { r: made.r, g: made.g, b: made.b, a: made.a };
   made.free();
   return out;
@@ -40,7 +41,9 @@ let shared;
 export function studio() {
   return (shared ??= Studio.make().catch((e) => {
     shared = undefined;
-    throw e;
+    throw e instanceof LusterError
+      ? e
+      : new LusterError('engineFailure', `the studio could not start: ${e?.message ?? e}`);
   }));
 }
 
@@ -247,7 +250,6 @@ class Studio {
       tiltLimit: handling.tiltLimit,
       restingTilt: handling.restingTilt,
       restingSpin: handling.restingSpin,
-      closest: handling.closest,
     };
     handling.free();
     this.lights = here.studioLights().map((l) => {
@@ -273,8 +275,8 @@ class Studio {
     this.toneSize = tone.size;
     tone.free();
 
-    // Drawn at the largest any view has asked for, and grown, never shrunk:
-    // a view smaller draws into a corner of it.
+    // Drawn at the largest any view or still has asked for, grown and not
+    // shrunk while views are left: a view smaller draws into a corner of it.
     this.frame = new THREE.WebGLRenderTarget(1, 1, {
       type: THREE.HalfFloatType,
       samples: 4,
@@ -318,7 +320,7 @@ class Studio {
     this.canvas.addEventListener('webglcontextrestored', () => {
       this.lost = false;
       this.prefilter();
-      for (const view of this.views) view.lost();
+      for (const view of this.views) view.restored();
     });
     /** Every stage drawing here, told when the context comes back. */
     this.views = new Set();
@@ -440,7 +442,8 @@ class Studio {
     return this.lights.some((light) => this.lamp(light.role, lighting) > 0);
   }
 
-  /** Gives back the frame's memory once no view is left to draw. */
+  /** Gives back the frame's memory: no view is left to draw, or a still made
+   *  it larger than they need. The next view to draw grows it again. */
   shrink() {
     this.frame.setSize(1, 1);
     this.renderer.setSize(1, 1, false);
@@ -525,8 +528,7 @@ function equirectangular({ width, height, rgba }) {
 function cube({ width, rgba }) {
   const face = width * width * 4;
   const faces = Array.from({ length: 6 }, (_, i) => {
-    const t = new THREE.DataTexture(rgba.subarray(i * face, (i + 1) * face), width, width);
-    return t;
+    return new THREE.DataTexture(rgba.subarray(i * face, (i + 1) * face), width, width);
   });
   const texture = new THREE.CubeTexture(faces);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -592,7 +594,8 @@ export class Stage {
     this.scene = new THREE.Scene();
     this.pivot = new THREE.Group();
     this.scene.add(this.pivot);
-    this.camera = new THREE.PerspectiveCamera(26, 1, 0.1, 100);
+    // Its field of view is the engine's, set as it draws.
+    this.camera = new THREE.PerspectiveCamera(1, 1, 0.1, 100);
     this.camera.position.set(0, 0, studio.distance);
     this.camera.lookAt(0, 0, 0);
     this.lamps = [];
@@ -603,7 +606,7 @@ export class Stage {
     this.tall = 1;
     this.tilt = studio.handling.restingTilt;
     this.spin = studio.handling.restingSpin;
-    this.onLost = null;
+    this.onRestored = null;
     studio.views.add(this);
   }
 
@@ -705,11 +708,11 @@ export class Stage {
 
   /** The context came back: the materials take the panorama prefiltered
    *  again, and the view draws. */
-  lost() {
+  restored() {
     const appearance = this.appearance;
     this.appearance = null;
     if (appearance) this.plate(appearance);
-    this.onLost?.();
+    this.onRestored?.();
   }
 
   dispose() {
@@ -743,4 +746,9 @@ export function srgb(value) {
 export function metalColor(metal, metals) {
   if (typeof metal === 'string' && Object.hasOwn(metals, metal)) return metals[metal];
   return srgb(metal) ?? metals.gold;
+}
+
+/** `off`, or the showcase whatever else is asked for. */
+export function lightingOf(value) {
+  return value === 'off' ? 'off' : 'showcase';
 }
