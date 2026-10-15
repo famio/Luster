@@ -32,8 +32,10 @@ back while it lives.
 The engine is fetched from `engine/luster_wasm_bg.wasm` next to the package, resolved
 with `import.meta.url`; serve it as `application/wasm`, compressed, so it compiles as it
 arrives. Vite and webpack bundle the worker and the engine as they are. Loaded from a
-CDN, the package starts its workers from a `blob:` script that imports them, which a
-Content Security Policy allows with `worker-src blob:`.
+CDN that serves the package's files as published, as jsDelivr's `/npm/` and unpkg do,
+it starts its workers from a `blob:` script that imports them, which a Content Security
+Policy allows with `worker-src blob:`; a CDN that rebundles modules moves the engine
+from beside them.
 
 Safari on iOS runs a page served over plain http from the local network without its
 JIT, and a mint takes some fifteen times as long: try one on a phone over https.
