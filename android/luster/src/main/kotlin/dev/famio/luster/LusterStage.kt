@@ -290,6 +290,9 @@ class LusterStage(private val context: Context) {
             if (unseen) {
                 unseen = false
                 arriving = engine.createFence()
+                // Sent now: a badge at rest draws no next frame to carry the
+                // fence to the GPU, and the placeholder would wait for a touch.
+                engine.flush()
             }
         }
         arriving?.let {
