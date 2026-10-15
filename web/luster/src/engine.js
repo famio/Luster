@@ -26,9 +26,26 @@ export function compile() {
 /** A call the worker could not answer because it was ended first. */
 export class Gone extends Error {}
 
+let bridge;
+
+/** A worker loads only a script of the page's origin. Served from a CDN, the
+ *  package starts one from a script of the page's own, a blob, that imports
+ *  the worker. A bundler finds the worker by the first `new URL` and serves
+ *  it with the page; webpack leaves a `file:` URL for this module. The blob's
+ *  URL is spelt otherwise, so bundlers leave it be. */
+function spawn() {
+  const here = new URL(import.meta.url);
+  if (!/^https?:$/.test(here.protocol) || here.origin === globalThis.location?.origin) {
+    return new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+  }
+  const worker = import.meta.url.replace(/[^/]*$/, 'worker.js');
+  bridge ??= URL.createObjectURL(new Blob([`import ${JSON.stringify(worker)};`], { type: 'text/javascript' }));
+  return new Worker(bridge, { type: 'module' });
+}
+
 export class Engine {
   constructor() {
-    this.worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+    this.worker = spawn();
     this.calls = new Map();
     this.serial = 0;
     this.worker.onmessage = ({ data }) => {
