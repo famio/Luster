@@ -23,7 +23,6 @@ const en = {
   noSvg: 'There’s no SVG in what was dropped.',
   notSvg: (name) => `${name} isn’t an SVG.`,
   source: 'Source',
-  privacy: 'Your SVG stays in this browser: the badge is made here.',
 };
 
 const ja = {
@@ -49,7 +48,6 @@ const ja = {
   noSvg: 'ドロップされたものに SVG がありません。',
   notSvg: (name) => `${name} は SVG ではありません。`,
   source: 'ソース',
-  privacy: 'SVG はこのブラウザから出ません。バッジはここで作ります。',
 };
 
 export const lang = (navigator.languages?.[0] ?? navigator.language ?? 'en').toLowerCase().startsWith('ja') ? 'ja' : 'en';

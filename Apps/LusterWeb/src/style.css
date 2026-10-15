@@ -277,11 +277,6 @@ luster-view {
 .switch input:checked::after { transform: translateX(14px); }
 .switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.privacy {
-  margin: 0;
-  font-size: 10.5px;
-  color: var(--section-label);
-}
 .export {
   width: 100%;
   padding: 8px 12px;
