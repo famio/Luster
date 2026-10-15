@@ -143,7 +143,7 @@ say "committing and tagging"
 git add -A Package.swift "$FLUTTER_MANIFEST" rust/Cargo.toml rust/Cargo.lock flutter/luster/pubspec.yaml \
     flutter/luster/example/pubspec.lock flutter/luster/android/build.gradle \
     android/luster/build.gradle.kts android/luster-compose/build.gradle.kts \
-    android/sample/build.gradle.kts \
+    android/sample/build.gradle.kts web/luster/package.json web/luster/package-lock.json \
     Sources/LusterCore/Generated android/luster/src/main/kotlin/dev/famio/luster/core
 git commit -m "chore(release): $VERSION"
 git tag -a "$VERSION" -m "Luster $VERSION"
