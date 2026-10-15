@@ -47,7 +47,8 @@ fi
 VERSIONED=(Package.swift "$FLUTTER_MANIFEST" rust/Cargo.toml rust/Cargo.lock flutter/luster/pubspec.yaml
            flutter/luster/example/pubspec.lock flutter/luster/android/build.gradle
            android/luster/build.gradle.kts android/luster-compose/build.gradle.kts
-           android/sample/build.gradle.kts web/luster/package.json web/luster/package-lock.json)
+           android/sample/build.gradle.kts web/luster/package.json web/luster/package-lock.json
+           Apps/LusterWeb/package-lock.json)
 KEEP="$(mktemp -d)"
 if [ "$DRY" = 1 ]; then
     for file in "${VERSIONED[@]}"; do
@@ -74,6 +75,9 @@ say "version $VERSION"
 /usr/bin/sed -i '' "s/^  \"version\": \".*\"/  \"version\": \"$VERSION\"/" web/luster/package.json web/luster/package-lock.json
 /usr/bin/sed -i '' "/^    \"\": {\$/,/^      \"version\":/ s/^      \"version\": \".*\"/      \"version\": \"$VERSION\"/" \
     web/luster/package-lock.json
+# The site's lock names the package it links, as npm would write it.
+/usr/bin/sed -i '' "/^    \"..\/..\/web\/luster\": {\$/,/^      \"version\":/ s/^      \"version\": \".*\"/      \"version\": \"$VERSION\"/" \
+    Apps/LusterWeb/package-lock.json
 
 say "engine"
 Scripts/build-xcframework.sh release
@@ -144,7 +148,7 @@ git add -A Package.swift "$FLUTTER_MANIFEST" rust/Cargo.toml rust/Cargo.lock flu
     flutter/luster/example/pubspec.lock flutter/luster/android/build.gradle \
     android/luster/build.gradle.kts android/luster-compose/build.gradle.kts \
     android/sample/build.gradle.kts web/luster/package.json web/luster/package-lock.json \
-    Sources/LusterCore/Generated android/luster/src/main/kotlin/dev/famio/luster/core
+    Apps/LusterWeb/package-lock.json Sources/LusterCore/Generated android/luster/src/main/kotlin/dev/famio/luster/core
 git commit -m "chore(release): $VERSION"
 git tag -a "$VERSION" -m "Luster $VERSION"
 

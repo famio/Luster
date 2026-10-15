@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Luster</title>
+    <meta name="description" content="Turn an SVG into a 3D enamel badge, in your browser, and export it as a GLB.">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/src/style.css">
+    <script type="module" src="/src/main.js"></script>
+  </head>
+  <body>
+    <header class="title">
+      <span class="name">LUSTER</span>
+      <a class="source" href="https://github.com/famio/Luster" data-text="source">Source</a>
+    </header>
+    <main>
+      <section class="stage" id="stage">
+        <luster-view id="view"><span class="spinner" aria-hidden="true"></span></luster-view>
+        <p class="placeholder" id="placeholder" data-text="placeholder"></p>
+        <div class="bottom">
+          <span class="file" id="file"></span>
+          <label class="open">
+            <input type="file" id="pick" accept=".svg,image/svg+xml">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10.5V2.2M5 5l3-3 3 3M3 8.5v4.3c0 .4.3.7.7.7h8.6c.4 0 .7-.3.7-.7V8.5"/></svg>
+            <span data-text="open"></span>
+          </label>
+        </div>
+        <div class="veil" id="veil"><span data-text="drop"></span></div>
+      </section>
+      <aside class="sidebar">
+        <section>
+          <h2 data-text="metal"></h2>
+          <div class="swatches" id="swatches"></div>
+        </section>
+        <section>
+          <h2 data-text="lighting"></h2>
+          <label class="switch"><span data-text="shine"></span><input type="checkbox" role="switch" id="shine" checked></label>
+        </section>
+        <section>
+          <h2 data-text="lines"></h2>
+          <label class="switch"><span data-text="metalLines"></span><input type="checkbox" role="switch" id="metal-lines"></label>
+        </section>
+        <section class="end">
+          <p class="privacy" data-text="privacy"></p>
+          <button class="export" id="export" disabled data-text="export"></button>
+        </section>
+      </aside>
+    </main>
+    <dialog id="alert" aria-labelledby="alert-title" aria-describedby="alert-message">
+      <form method="dialog">
+        <h3 id="alert-title"></h3>
+        <p id="alert-message"></p>
+        <button value="ok" data-text="ok"></button>
+      </form>
+    </dialog>
+  </body>
+</html>

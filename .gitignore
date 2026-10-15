@@ -40,6 +40,9 @@ android/luster/src/main/jniLibs/
 # Web: the engine is built by Scripts/build-wasm.sh.
 web/luster/engine/
 web/**/node_modules/
+Apps/LusterWeb/node_modules/
+Apps/LusterWeb/dist/
+Apps/LusterWeb/.wrangler/
 
 # Claude Code: installs the examples on my own iPhone.
 .claude/skills/install-iphone/

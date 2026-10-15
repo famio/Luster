@@ -9,6 +9,7 @@ targets), and for Android the NDK and `cargo-ndk`.
 Scripts/build-xcframework.sh           # iOS, the simulator and macOS; regenerates the Swift bindings
 Scripts/build-android.sh               # arm64-v8a and x86_64; regenerates the Kotlin bindings
 Scripts/build-flutter-xcframework.sh   # the Flutter plugin's engine for iOS, the simulator and macOS
+Scripts/build-wasm.sh                  # the web package's engine, into web/luster/engine
 ```
 
 The first leaves the XCFramework `Package.swift` points at; the second leaves the `.so`
@@ -33,7 +34,8 @@ and in the app, add `mavenLocal()` to the repositories and depend on
 cargo test --manifest-path rust/Cargo.toml   # the engine
 swift test                                   # the Swift package
 Scripts/parity.sh                            # what the engine makes of the fixtures
-Scripts/parity.sh wasm                       # the same, built for WebAssembly (Node 22)
+Scripts/parity.sh wasm                       # the same, built for WebAssembly (Node 24)
+(cd web/luster && npm test)                  # how the web package schedules its mints
 Scripts/format.sh --lint                     # the Swift's and the Dart's formatting
 (cd android && ./gradlew lint)               # Android Lint, over the Kotlin and the resources
 ```
@@ -90,6 +92,19 @@ LusterShot --tone-table out.bin   # measures RealityKit's tone mapping for the F
 
 `LUSTER_TIME=1` prints where a scene's time goes.
 
+**`Apps/LusterWeb`** is the macOS app as a page, at [luster.famio.dev](https://luster.famio.dev),
+built on `web/luster` from the checkout after `Scripts/build-wasm.sh`:
+
+```sh
+cd Apps/LusterWeb && npm install
+npm run dev                         # Vite, with the package as it is in web/luster
+npm run build && npx wrangler dev   # the build, served as Cloudflare serves it
+```
+
+The Site workflow deploys it to Cloudflare Workers once CI has passed on `main`, or when
+run by hand, with the repository's `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+The page is static: every badge is minted and drawn in the visitor's browser.
+
 ## Project layout
 
 - `Package.swift`, `Sources/Luster`, `Sources/LusterUI` — the Swift package. `Luster`
@@ -109,6 +124,7 @@ LusterShot --tone-table out.bin   # measures RealityKit's tone mapping for the F
 - `rust/crates/luster-dart` — flutter_rust_bridge bindings, which hand Dart the meshes
   as attribute arrays in flutter_scene's left-handed space
 - `rust/crates/luster-cli` — `luster mint|artwork|export|parity|golden`
+- `rust/crates/luster-wasm` — wasm-bindgen bindings for the web
 - `android/luster` — the Kotlin library: the bindings, `Luster.mint`, `LusterView`
   (Filament) and `LusterSnapshot`
 - `android/luster-compose` — the same view as a composable, a thin layer over the stage
@@ -116,7 +132,8 @@ LusterShot --tone-table out.bin   # measures RealityKit's tone mapping for the F
 - `android/sample` — the Android demo
 - `flutter/luster` — the Flutter package: `LusterView`, the bindings, and the badge's
   own shader (`shaders/`), which `hook/build.dart` compiles for the app's Flutter SDK
-- `Examples/`, `Apps/`, `Tools/` — the iOS demo, the macOS app, LusterShot
+- `web/luster` — the npm package: minting in workers and `<luster-view>` (three.js)
+- `Examples/`, `Apps/`, `Tools/` — the iOS demo, the macOS app and its page, LusterShot
 - `Scripts/` — building the engine, the parity check, formatting, releasing
 
 ## Releasing

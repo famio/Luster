@@ -1,0 +1,9 @@
+{
+  // The page alone: every badge is minted and drawn in the visitor's browser.
+  "name": "luster",
+  "compatibility_date": "2026-10-15",
+  "assets": { "directory": "./dist" },
+  "routes": [{ "pattern": "luster.famio.dev", "custom_domain": true }],
+  "workers_dev": false,
+  "preview_urls": false
+}
