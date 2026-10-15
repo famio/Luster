@@ -348,7 +348,7 @@ class LusterStage(private val context: Context) {
      * drag gives way to them without a flick.
      */
     fun pinchStarted(x: Float, y: Float) {
-        if (!zoomEnabled || model == null) return
+        if (released || !zoomEnabled || model == null) return
         dragging = false
         velocity = 0f
         val (atX, atY) = fraction(x, y)
@@ -373,7 +373,7 @@ class LusterStage(private val context: Context) {
     fun putBack() = see(atRest)
 
     private fun see(look: Look) {
-        if (look == this.look) return
+        if (released || look == this.look) return
         this.look = look
         frame()
     }

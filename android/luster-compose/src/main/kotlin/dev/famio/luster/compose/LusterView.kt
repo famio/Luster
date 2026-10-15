@@ -22,11 +22,14 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import android.view.ViewConfiguration
 import dev.famio.luster.LusterAppearance
 import dev.famio.luster.LusterOptions
 import dev.famio.luster.LusterSource
@@ -110,7 +113,9 @@ fun LusterView(
 
     Box(modifier) {
         AndroidEmbeddedExternalSurface(
-            modifier = Modifier.fillMaxSize().pointerInput(stage) { turn(stage) },
+            modifier = Modifier.fillMaxSize().pointerInput(stage) {
+                turn(stage, ViewConfiguration.get(context).scaledDoubleTapSlop.toFloat())
+            },
             // Transparent, so the badge lies over what is behind it.
             isOpaque = false,
         ) {
@@ -149,7 +154,11 @@ fun LusterView(
  * double tap puts it back. Every change is consumed, so a parent does not
  * scroll with it.
  */
-private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.turn(stage: LusterStage) {
+private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.turn(
+    stage: LusterStage,
+    /** How near a second tap lands to the first for a double tap, pixels, as a View has it. */
+    doubleTapSlop: Float,
+) {
     var lastTap: Pair<Offset, Long>? = null
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
@@ -160,30 +169,35 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.turn(sta
         var last: Offset = down.position
         var lifted = false
         var liftedAt = down.uptimeMillis
-        // The fingers' spread as a pinch began, while one is going on.
-        var pinchSpread: Float? = null
+        // The two fingers pinching and their spread as they began, while a
+        // pinch is going on.
+        var pinch: Pinch? = null
         var pinched = false
         try {
             while (true) {
                 val event = awaitPointerEvent()
                 val pressed = event.changes.filter { it.pressed }
-                if (pinchSpread == null && !pinched && pressed.size >= 2 && stage.zoomEnabled) {
+                val pinching = pinch?.takeIf { p -> pressed.any { it.id == p.a } && pressed.any { it.id == p.b } }
+                if (pinching == null && pinch != null) {
+                    // One of the two lifted: two others still down carry it on.
+                    pinch = null
+                    stage.pinchEnded()
+                }
+                if (pinch == null && pressed.size >= 2 && stage.zoomEnabled) {
                     // The drag gives way to the pinch, without a flick.
+                    if (!pinched) stage.dragEnded(null)
                     pinched = true
-                    stage.dragEnded(null)
-                    pinchSpread = spread(pressed)
-                    val middle = middle(pressed)
+                    pinch = Pinch(pressed[0].id, pressed[1].id, spread(pressed[0], pressed[1]))
+                    val middle = middle(pressed[0], pressed[1])
                     stage.pinchStarted(middle.x, middle.y)
                 }
                 if (pinched) {
                     event.changes.forEach { it.consume() }
-                    val spread = pinchSpread
-                    if (spread != null && pressed.size >= 2) {
-                        val middle = middle(pressed)
-                        stage.pinched(spread(pressed) / spread, middle.x, middle.y)
-                    } else if (spread != null) {
-                        pinchSpread = null
-                        stage.pinchEnded()
+                    pinch?.let { p ->
+                        val a = pressed.first { it.id == p.a }
+                        val b = pressed.first { it.id == p.b }
+                        val middle = middle(a, b)
+                        stage.pinched(spread(a, b) / p.spread, middle.x, middle.y)
                     }
                     if (pressed.isEmpty()) break
                     continue
@@ -203,7 +217,7 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.turn(sta
                 }
             }
         } catch (cancelled: CancellationException) {
-            if (pinchSpread != null) stage.pinchEnded()
+            if (pinch != null) stage.pinchEnded()
             stage.dragEnded(null)
             throw cancelled
         }
@@ -217,7 +231,7 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.turn(sta
         ) return@awaitEachGesture
         val tap = lastTap
         lastTap = if (tap != null && down.uptimeMillis - tap.second <= timeout &&
-            (down.position - tap.first).getDistance() <= viewConfiguration.touchSlop * 2
+            (down.position - tap.first).getDistance() <= doubleTapSlop
         ) {
             stage.putBack()
             null
@@ -227,10 +241,12 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.turn(sta
     }
 }
 
-/** The distance between the first two fingers down, pixels. */
-private fun spread(pressed: List<androidx.compose.ui.input.pointer.PointerInputChange>): Float =
-    maxOf(1f, (pressed[0].position - pressed[1].position).getDistance())
+/** The two fingers of a pinch, and how far apart they were as it began. */
+private class Pinch(val a: PointerId, val b: PointerId, val spread: Float)
 
-/** The point halfway between the first two fingers down. */
-private fun middle(pressed: List<androidx.compose.ui.input.pointer.PointerInputChange>): Offset =
-    (pressed[0].position + pressed[1].position) / 2f
+/** The distance between two fingers, pixels. */
+private fun spread(a: PointerInputChange, b: PointerInputChange): Float =
+    maxOf(1f, (a.position - b.position).getDistance())
+
+/** The point halfway between them. */
+private fun middle(a: PointerInputChange, b: PointerInputChange): Offset = (a.position + b.position) / 2f

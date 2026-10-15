@@ -110,8 +110,8 @@ class LusterView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private var touchDown = Triple(0f, 0f, 0L)
     /** The last tap, for a second one to make a double tap. */
     private var lastTap: Triple<Float, Float, Long>? = null
-    /** The fingers' spread as a pinch began, while one is going on. */
-    private var pinchSpread: Float? = null
+    /** The two fingers pinching, by pointer id, and their spread as they began. */
+    private var pinch: Triple<Int, Int, Float>? = null
     /** A pinch was made since the fingers came down: the one left behind does not turn the badge. */
     private var pinched = false
 
@@ -171,25 +171,36 @@ class LusterView @JvmOverloads constructor(context: Context, attrs: AttributeSet
                 tracker = VelocityTracker.obtain().apply { addMovement(event) }
             }
             MotionEvent.ACTION_POINTER_DOWN -> {
-                if (event.pointerCount == 2 && zoomEnabled && pinchSpread == null) {
+                if (pinch == null && zoomEnabled) {
                     // The drag gives way to the pinch, without a flick.
+                    if (!pinched) stage.dragEnded(null)
                     pinched = true
-                    stage.dragEnded(null)
-                    pinchSpread = spread(event)
-                    stage.pinchStarted(middle(event).first, middle(event).second)
+                    pinchWith(event, (0 until event.pointerCount).map(event::getPointerId))
                 }
             }
             MotionEvent.ACTION_POINTER_UP -> {
-                if (pinchSpread != null && event.pointerCount <= 2) {
-                    pinchSpread = null
-                    stage.pinchEnded()
+                val pinching = pinch
+                val lifted = event.getPointerId(event.actionIndex)
+                if (pinching != null && (lifted == pinching.first || lifted == pinching.second)) {
+                    // Two still down carry the pinch on from where they are.
+                    val left = (0 until event.pointerCount).filter { it != event.actionIndex }.map(event::getPointerId)
+                    if (left.size >= 2) {
+                        pinchWith(event, left)
+                    } else {
+                        pinch = null
+                        stage.pinchEnded()
+                    }
                 }
             }
             MotionEvent.ACTION_MOVE -> {
-                val spread = pinchSpread
-                if (spread != null) {
-                    val (x, y) = middle(event)
-                    stage.pinched(spread(event) / spread, x, y)
+                val pinching = pinch
+                if (pinching != null) {
+                    val a = event.findPointerIndex(pinching.first)
+                    val b = event.findPointerIndex(pinching.second)
+                    if (a >= 0 && b >= 0) {
+                        val (x, y) = middle(event, a, b)
+                        stage.pinched(spread(event, a, b) / pinching.third, x, y)
+                    }
                     return true
                 }
                 if (pinched) return true
@@ -201,7 +212,7 @@ class LusterView @JvmOverloads constructor(context: Context, attrs: AttributeSet
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (pinched) {
-                    pinchSpread = null
+                    pinch = null
                     pinched = false
                     stage.pinchEnded()
                     tracker?.recycle()
@@ -233,13 +244,22 @@ class LusterView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         return true
     }
 
-    /** The distance between the first two fingers, pixels. */
-    private fun spread(event: MotionEvent) =
-        max(1f, hypot(event.getX(0) - event.getX(1), event.getY(0) - event.getY(1)))
+    /** Pinches with the first two of [ids], from the badge where it is. */
+    private fun pinchWith(event: MotionEvent, ids: List<Int>) {
+        val a = event.findPointerIndex(ids[0])
+        val b = event.findPointerIndex(ids[1])
+        pinch = Triple(ids[0], ids[1], spread(event, a, b))
+        val (x, y) = middle(event, a, b)
+        stage.pinchStarted(x, y)
+    }
 
-    /** The point halfway between the first two fingers. */
-    private fun middle(event: MotionEvent) =
-        (event.getX(0) + event.getX(1)) / 2 to (event.getY(0) + event.getY(1)) / 2
+    /** The distance between the fingers at [a] and [b], pixels. */
+    private fun spread(event: MotionEvent, a: Int, b: Int) =
+        max(1f, hypot(event.getX(a) - event.getX(b), event.getY(a) - event.getY(b)))
+
+    /** The point halfway between them. */
+    private fun middle(event: MotionEvent, a: Int, b: Int) =
+        (event.getX(a) + event.getX(b)) / 2 to (event.getY(a) + event.getY(b)) / 2
 
     /** A finger lifted where it came down, soon: a second one soon after puts the badge back. */
     private fun tapped(event: MotionEvent) {
