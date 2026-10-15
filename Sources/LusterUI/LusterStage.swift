@@ -187,27 +187,40 @@ final class LusterStage {
                 pinch.zoom * Float(scale), point: pinch.point, at: fraction(location)))
     }
 
-    /// The same, from a gesture that gives no beginning of its own.
-    func pinch(scale: CGFloat, at location: CGPoint) {
-        if pinch == nil { pinchBegan(at: location) }
-        pinchChanged(scale: scale, at: location)
-    }
-
     func pinchEnded() {
         pinch = nil
         // A trackpad's pinch comes with no drag to end it.
         if !touching { pinched = false }
     }
 
+    /// The fingers are off the view, however their gestures ended: one
+    /// cancelled tells neither its end nor the drag's.
+    func touchesEnded() {
+        if touching { dragEnded(velocity: .zero) }
+        pinchEnded()
+    }
+
+    #if canImport(AppKit) && !canImport(UIKit)
+    /// The same as `pinchChanged`, from a gesture that gives no beginning of
+    /// its own.
+    func pinch(scale: CGFloat, at location: CGPoint) {
+        if pinch == nil { pinchBegan(at: location) }
+        pinchChanged(scale: scale, at: location)
+    }
+
+    /// Whether a slide would move the badge: it is brought closer.
+    var canSlide: Bool { zoomEnabled && scene != nil && look.zoom > 1 }
+
     /// Moves the badge brought closer by `delta` points, as a trackpad's
     /// two fingers slide; false at its size, where the slide is not its.
     func slide(by delta: CGSize) -> Bool {
-        guard zoomEnabled, scene != nil, look.zoom > 1 else { return false }
+        guard canSlide else { return false }
         let frame = SIMD2(Float(size.width), Float(size.height)) * look.zoom
         let middle = SIMD2(look.x, look.y) - SIMD2(Float(delta.width), Float(delta.height)) / frame
         see(LusterHandling.look(look.zoom, point: middle, at: .zero))
         return true
     }
+    #endif
 
     /// Back at its size, in the middle: a double tap.
     func putBack() {

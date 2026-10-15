@@ -2,7 +2,9 @@ import SwiftUI
 
 extension View {
     /// A pinch brings the badge closer and two fingers move it about.
-    func pinchable(_ stage: LusterStage) -> some View {
+    /// `pinching` is up while a trackpad pinches, for its end to be seen when
+    /// the gesture is cancelled.
+    func pinchable(_ stage: LusterStage, pinching: GestureState<Bool>) -> some View {
         #if canImport(UIKit)
         gesture(PinchGesture(stage: stage))
         #else
@@ -10,6 +12,7 @@ extension View {
         // stays put as the fingers spread.
         simultaneousGesture(
             MagnifyGesture()
+                .updating(pinching) { _, state, _ in state = true }
                 .onChanged { stage.pinch(scale: $0.magnification, at: $0.startLocation) }
                 .onEnded { _ in stage.pinchEnded() }
         )
@@ -29,43 +32,89 @@ struct PinchGesture: UIGestureRecognizerRepresentable {
 
     func makeUIGestureRecognizer(context: Context) -> UIPinchGestureRecognizer {
         let pinch = UIPinchGestureRecognizer()
-        pinch.delegate = context.coordinator
+        pinch.delegate = context.coordinator.alongside
         return pinch
     }
 
-    func makeCoordinator(converter: CoordinateSpaceConverter) -> Alongside {
-        Alongside()
+    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator {
+        // SwiftUI's drag is on a view of its own: the pinch runs with any.
+        Coordinator(alongside: Alongside(within: nil))
     }
 
     func handleUIGestureRecognizerAction(
         _ pinch: UIPinchGestureRecognizer, context: Context
     ) {
-        let at = context.converter.localLocation
+        context.coordinator.follower.follow(
+            pinch, at: context.converter.localLocation, stage: stage)
+    }
+
+    final class Coordinator {
+        let alongside: Alongside
+        let follower = PinchFollower()
+
+        init(alongside: Alongside) {
+            self.alongside = alongside
+        }
+    }
+}
+
+/// Hands a pinch to the stage. A finger lifted holds the badge where it is,
+/// and a second one down again carries on from there.
+@MainActor
+final class PinchFollower {
+    private var resting = false
+
+    func follow(_ pinch: UIPinchGestureRecognizer, at location: CGPoint, stage: LusterStage) {
         switch pinch.state {
         case .began:
-            stage.pinchBegan(at: at)
-            stage.pinchChanged(scale: pinch.scale, at: at)
+            resting = false
+            stage.pinchBegan(at: location)
+            stage.pinchChanged(scale: pinch.scale, at: location)
         case .changed:
-            // A finger lifted leaves one: the pinch is over, not moved.
-            if pinch.numberOfTouches >= 2 { stage.pinchChanged(scale: pinch.scale, at: at) }
+            guard pinch.numberOfTouches >= 2 else {
+                resting = true
+                return
+            }
+            if resting {
+                resting = false
+                pinch.scale = 1
+                stage.pinchBegan(at: location)
+            }
+            stage.pinchChanged(scale: pinch.scale, at: location)
         default:
             stage.pinchEnded()
         }
     }
 }
 
-/// Lets the pinch run with the drag that is already turning the badge.
+/// Lets the badge's gestures run together: a pinch with the drag already
+/// turning it, a double tap with both.
 final class Alongside: NSObject, UIGestureRecognizerDelegate {
+    /// The view whose gestures these run with; nil for any.
+    private weak var view: UIView?
+    /// Whether a touch is the badge's, rather than its placeholder's.
+    var receives: (UITouch) -> Bool = { _ in true }
+
+    init(within view: UIView?) {
+        self.view = view
+    }
+
     func gestureRecognizer(
         _ gesture: UIGestureRecognizer,
         shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
-    ) -> Bool { true }
+    ) -> Bool {
+        view == nil || other.view === view
+    }
+
+    func gestureRecognizer(_ gesture: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        receives(touch)
+    }
 }
 #elseif canImport(AppKit)
 import AppKit
 
-/// A trackpad's two-finger slide over the badge brought closer moves it;
-/// at its size the slide scrolls what is round it, as before. Seen
+/// A trackpad's two-finger slide, or a mouse's wheel, over the badge brought
+/// closer moves it; at its size the slide scrolls what is round it. Seen
 /// before the views under the pointer, as a slide reaches no gesture.
 struct TrackpadSlide: NSViewRepresentable {
     let stage: LusterStage
@@ -79,7 +128,10 @@ struct TrackpadSlide: NSViewRepresentable {
 
 final class SlideCatcher: NSView {
     private let stage: LusterStage
-    private var monitor: Any?
+    nonisolated(unsafe) private var monitor: Any?
+    /// Whether the slide under way is the badge's: decided as it begins, so
+    /// a scroll that starts elsewhere, and its momentum, pass over the badge.
+    private var taking = false
 
     init(stage: LusterStage) {
         self.stage = stage
@@ -89,6 +141,10 @@ final class SlideCatcher: NSView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
+    deinit {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+    }
+
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     override func viewDidMoveToWindow() {
@@ -97,15 +153,27 @@ final class SlideCatcher: NSView {
         monitor = nil
         guard window != nil else { return }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
-            guard let self, event.window === window,
-                bounds.contains(convert(event.locationInWindow, from: nil))
-            else { return event }
-            // A mouse's wheel counts lines.
-            let unit: CGFloat = event.hasPreciseScrollingDeltas ? 1 : 16
-            let delta = CGSize(
-                width: event.scrollingDeltaX * unit, height: event.scrollingDeltaY * unit)
-            return MainActor.assumeIsolated { stage.slide(by: delta) } ? nil : event
+            guard let self else { return event }
+            return MainActor.assumeIsolated { self.take(event) } ? nil : event
         }
+    }
+
+    private func take(_ event: NSEvent) -> Bool {
+        let begins = event.phase.contains(.began) || event.phase.contains(.mayBegin)
+        // A mouse's wheel has no phases: each turn of it is a slide of its own.
+        let wheel = event.phase.isEmpty && event.momentumPhase.isEmpty
+        if begins || wheel {
+            // Over the part of the badge on screen, not one scrolled away.
+            taking =
+                event.window === window
+                && visibleRect.contains(convert(event.locationInWindow, from: nil))
+                && stage.canSlide
+        }
+        guard taking else { return false }
+        // A mouse's wheel counts lines.
+        let unit: CGFloat = event.hasPreciseScrollingDeltas ? 1 : 16
+        return stage.slide(
+            by: CGSize(width: event.scrollingDeltaX * unit, height: event.scrollingDeltaY * unit))
     }
 }
 #endif

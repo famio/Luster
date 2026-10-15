@@ -38,6 +38,10 @@ public struct LusterView: View {
     var onPlaceholderChange: (@MainActor (Bool) -> Void)?
 
     @State private var stage = LusterStage()
+    /// Up while a finger or a trackpad is on the view: a gesture cancelled
+    /// says so only by these going down.
+    @GestureState private var dragging = false
+    @GestureState private var pinching = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init(
@@ -99,10 +103,14 @@ public struct LusterView: View {
         }
         .gesture(
             DragGesture(minimumDistance: 0)
+                .updating($dragging) { _, state, _ in state = true }
                 .onChanged { stage.dragChanged($0.translation) }
                 .onEnded { stage.dragEnded(velocity: $0.velocity) }
         )
-        .pinchable(stage)
+        .pinchable(stage, pinching: $pinching)
+        .onChange(of: dragging || pinching) { _, down in
+            if !down { stage.touchesEnded() }
+        }
         .simultaneousGesture(TapGesture(count: 2).onEnded { stage.putBack() })
         .task(id: Pair(source, options)) {
             await stage.load(source, options: options, appearance: appearance)

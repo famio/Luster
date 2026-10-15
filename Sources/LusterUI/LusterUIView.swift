@@ -78,8 +78,10 @@ public final class LusterUIView: UIView {
         frame: .zero, cameraMode: .nonAR,
         automaticallyConfigureSession: false)
     private var updates: (any Cancellable)?
-    /// Lets the pinch and the double tap run with the drag.
-    private let alongside = Alongside()
+    /// Lets the pinch and the double tap run with the drag, and leaves a
+    /// touch on the placeholder to it.
+    private lazy var alongside = Alongside(within: self)
+    private let follower = PinchFollower()
     private var loading: Task<Void, Never>?
     private var applying: Task<Void, Never>?
 
@@ -120,6 +122,7 @@ public final class LusterUIView: UIView {
         let pinch = UIPinchGestureRecognizer(target: self, action: #selector(pinch))
         pinch.delegate = alongside
         addGestureRecognizer(pinch)
+        alongside.receives = { [weak self] _ in !(self?.placeholderUp ?? false) }
         let doubleTap = UITapGestureRecognizer(target: self, action: #selector(putBack))
         doubleTap.numberOfTapsRequired = 2
         doubleTap.delegate = alongside
@@ -250,17 +253,7 @@ public final class LusterUIView: UIView {
     }
 
     @objc private func pinch(_ gesture: UIPinchGestureRecognizer) {
-        let at = gesture.location(in: self)
-        switch gesture.state {
-        case .began:
-            stage.pinchBegan(at: at)
-            stage.pinchChanged(scale: gesture.scale, at: at)
-        case .changed:
-            // A finger lifted leaves one: the pinch is over, not moved.
-            if gesture.numberOfTouches >= 2 { stage.pinchChanged(scale: gesture.scale, at: at) }
-        default:
-            stage.pinchEnded()
-        }
+        follower.follow(gesture, at: gesture.location(in: self), stage: stage)
     }
 
     @objc private func putBack() {

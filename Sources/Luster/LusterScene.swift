@@ -90,9 +90,10 @@ public final class LusterScene {
         camera.camera.fieldOfViewOrientation = .vertical
         camera.camera.fieldOfViewInDegrees = atan(half / look.zoom) * 360 / .pi
         // A point off the middle is looked at by turning the camera where it
-        // stands, as the other platforms shift their lens: what each point of
-        // the badge reflects depends on where the camera is, so the light
-        // and its reflections stay as they are.
+        // stands, where the other platforms shift their lens: what each point
+        // of the badge reflects depends on where the camera is, so the light
+        // and its reflections stay as they are. Off the middle the picture
+        // leans by a percent or two at most, as a turned camera's does.
         let across = 2 * look.x * half * aspectRatio
         let up = -2 * look.y * half
         let turn =
