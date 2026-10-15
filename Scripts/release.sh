@@ -1,10 +1,10 @@
 #!/bin/bash
-# Prepares a release: sets the version everywhere, builds the engine, packs the
-# XCFrameworks, points the Swift package and the Flutter plugin's at the zips a
-# GitHub release will carry, and tags it.
+# Prepares a release: sets the version everywhere, builds the engine for every
+# platform and the web, packs the XCFrameworks, points the Swift package and
+# the Flutter plugin's at the zips a GitHub release will carry, and tags it.
 #
-#   Scripts/release.sh 0.2.0            # prepare, commit and tag
-#   Scripts/release.sh 0.2.0 --dry-run  # do everything but commit and tag
+#   Scripts/release.sh X.Y.Z            # prepare, commit and tag
+#   Scripts/release.sh X.Y.Z --dry-run  # do everything but commit and tag
 #
 # It never pushes and never publishes: it leaves a commit and a tag here, and
 # prints what to run when the release is really wanted. The release workflow is
@@ -83,11 +83,14 @@ say "engine"
 Scripts/build-xcframework.sh release
 Scripts/build-flutter-xcframework.sh release
 Scripts/build-android.sh release
+Scripts/build-wasm.sh release
 
 say "checks"
 (cd rust && cargo test --workspace --quiet)
 swift test
 Scripts/parity.sh
+Scripts/parity.sh wasm
+(cd web/luster && npm test)
 
 say "packing the XCFrameworks"
 rm -f "$ZIP" "$FLUTTER_ZIP"
@@ -172,10 +175,13 @@ the repository's root:
 The zips have to be these: the engine never builds to the same bytes twice,
 and the Package.swift files name these ones' checksums. Run the workflow with
 publish=false first to check everything without releasing anything; with
-publish=true it takes the draft public. pub.dev and the macOS app come last,
-by hand. pub.dev from the tag, whose Package.swift names the release's zip (on
-the branch it names an engine the package does not carry; nothing stops that):
+publish=true it takes the draft public. pub.dev, npm and the macOS app come
+last, by hand. pub.dev from the tag, whose Package.swift names the release's
+zip (on the branch it names an engine the package does not carry; nothing
+stops that), and npm with the engine built here, which packing checks is this
+version's:
   git checkout "$VERSION" && (cd flutter/luster && dart pub publish); git checkout -
+  (cd web/luster && npm publish)
   Apps/LusterMac/notarize.sh
   gh release upload "$VERSION" "Apps/LusterMac/.build/Luster-$VERSION-macos.zip"
 EOF

@@ -1,9 +1,30 @@
 {
   "name": "@famio/luster",
   "version": "0.3.0",
-  "private": true,
   "description": "Turns an SVG into a 3D enamel badge, struck in a worker by the Luster engine compiled to WebAssembly.",
   "license": "MIT",
+  "author": "famio",
+  "homepage": "https://github.com/famio/Luster/tree/main/web/luster#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/famio/Luster.git",
+    "directory": "web/luster"
+  },
+  "bugs": {
+    "url": "https://github.com/famio/Luster/issues"
+  },
+  "keywords": [
+    "svg",
+    "3d",
+    "badge",
+    "enamel",
+    "pin",
+    "webassembly",
+    "wasm",
+    "three",
+    "web-component",
+    "gltf"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -22,6 +43,8 @@
   "files": [
     "src",
     "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
     "engine/luster_wasm.js",
     "engine/luster_wasm_bg.wasm"
   ],
@@ -32,7 +55,8 @@
     "access": "public"
   },
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "prepack": "node scripts/prepack.mjs"
   },
   "peerDependencies": {
     "three": "^0.186.0"

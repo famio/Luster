@@ -6,7 +6,7 @@
 # one of them is a difference, down to a single byte of a badge.
 #
 #   Scripts/parity.sh        # the engine built for this machine
-#   Scripts/parity.sh wasm   # built for WebAssembly, run by Node, as the web runs it
+#   Scripts/parity.sh wasm   # built for WebAssembly, run by Node's WASI
 #
 # `luster golden fixtures/golden fixtures/svg/*.svg` rewrites the committed
 # dumps, for a change that is meant to move them; `luster golden <dir> <svg>…`

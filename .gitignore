@@ -37,10 +37,12 @@ android/*/build/
 # Android: the engine's libraries are built by Scripts/build-android.sh.
 android/luster/src/main/jniLibs/
 
-# Web: the engine is built by Scripts/build-wasm.sh.
+# Web: the engine is built by Scripts/build-wasm.sh, and the licences are
+# copied in as the package is packed.
 web/luster/engine/
-web/**/node_modules/
-Apps/LusterWeb/node_modules/
+web/luster/LICENSE
+web/luster/THIRD_PARTY_NOTICES.md
+node_modules/
 Apps/LusterWeb/dist/
 Apps/LusterWeb/.wrangler/
 

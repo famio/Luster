@@ -25,8 +25,9 @@ Maven repository after `Scripts/build-android.sh`:
 cd android && ./gradlew :luster:publishToMavenLocal :luster-compose:publishToMavenLocal
 ```
 
-and in the app, add `mavenLocal()` to the repositories and depend on
-`dev.famio:luster:0.1.0` (and `dev.famio:luster-compose:0.1.0` for Compose).
+and in the app, add `mavenLocal()` to the repositories and depend on `dev.famio:luster`
+(and `dev.famio:luster-compose` for Compose) at the version in
+`android/luster/build.gradle.kts`.
 
 ## Checks
 
@@ -117,8 +118,7 @@ The page is static: every badge is minted and drawn in the visitor's browser.
   colours), `texture`, and `model` and `math`, which use nothing else. `style` is the
   studio every renderer builds: the lighting, how each material is finished, the
   framing and how a drag turns the badge, and what each renderer's numbers are worth,
-  RealityKit's measured tone mapping among them, so the three platforms cannot drift
-  apart. `mints` is how every binding asks for a badge: a few at once, the recent ones
+  RealityKit's measured tone mapping among them, so the renderers cannot drift apart. `mints` is how every binding asks for a badge: a few at once, the recent ones
   kept, and one mint shared by everyone asking for the same one
 - `rust/crates/luster-ffi` — uniffi bindings for Swift and Kotlin
 - `rust/crates/luster-dart` — flutter_rust_bridge bindings, which hand Dart the meshes
@@ -132,7 +132,8 @@ The page is static: every badge is minted and drawn in the visitor's browser.
 - `android/sample` — the Android demo
 - `flutter/luster` — the Flutter package: `LusterView`, the bindings, and the badge's
   own shader (`shaders/`), which `hook/build.dart` compiles for the app's Flutter SDK
-- `web/luster` — the npm package: minting in workers and `<luster-view>` (three.js)
+- `web/luster` — the npm package: minting in workers, `<luster-view>` (three.js) and
+  `LusterSnapshot`
 - `Examples/`, `Apps/`, `Tools/` — the iOS demo, the macOS app and its page, LusterShot
 - `Scripts/` — building the engine, the parity check, formatting, releasing
 
@@ -141,12 +142,13 @@ The page is static: every badge is minted and drawn in the visitor's browser.
 Nothing publishes by itself. A release is prepared here and finished by hand.
 
 ```sh
-Scripts/release.sh 0.2.0 --dry-run   # set the version, build, check, see the diff
-Scripts/release.sh 0.2.0             # the same, then commit and tag locally
+Scripts/release.sh X.Y.Z --dry-run   # set the version, build, check, see the diff
+Scripts/release.sh X.Y.Z             # the same, then commit and tag locally
 ```
 
-It sets the version in the engine, the Flutter package and the Android library, builds
-the engine for every platform, runs the tests and the parity check, packs the
+It sets the version in the engine, the Flutter package, the Android library and the npm
+package, builds the engine for every platform and the web, runs the tests and the parity
+checks, packs the
 XCFrameworks and points `Package.swift` and the Flutter plugin's
 `darwin/luster/Package.swift` at the zips the release will carry — by URL and
 checksum, so a consumer never needs Rust. It pushes nothing.
@@ -161,17 +163,21 @@ reads the default branch's pubspec and marks the repository unverified for it.
 When the release is really wanted, from the repository's root:
 
 ```sh
-git push origin HEAD 0.2.0
-gh release create 0.2.0 rust/target/apple/LusterFFI.xcframework.zip \
+git push origin HEAD X.Y.Z
+gh release create X.Y.Z rust/target/apple/LusterFFI.xcframework.zip \
   rust/target/flutter/luster_dart.xcframework.zip \
-  --draft --verify-tag --title "Luster 0.2.0" --generate-notes     # the zips the tag names
-gh workflow run release.yml -f version=0.2.0 -f publish=false   # check
-gh workflow run release.yml -f version=0.2.0 -f publish=true    # publish
-git checkout 0.2.0 && (cd flutter/luster && dart pub publish); git checkout -
+  --draft --verify-tag --title "Luster X.Y.Z" --generate-notes     # the zips the tag names
+gh workflow run release.yml -f version=X.Y.Z -f publish=false   # check
+gh workflow run release.yml -f version=X.Y.Z -f publish=true    # publish
+git checkout X.Y.Z && (cd flutter/luster && dart pub publish); git checkout -
                                           # pub.dev, by hand, once the workflow is done
+(cd web/luster && npm publish)            # npm, by hand, with the engine release.sh built
 Apps/LusterMac/notarize.sh                # the macOS app, signed and notarized
-gh release upload 0.2.0 Apps/LusterMac/.build/Luster-0.2.0-macos.zip
+gh release upload X.Y.Z Apps/LusterMac/.build/Luster-X.Y.Z-macos.zip
 ```
+
+Packing the npm package copies the licences into it and refuses an engine that is not
+this version's release build (`web/luster/scripts/prepack.mjs`).
 
 `notarize.sh` signs the app with the Developer ID in the keychain and has Apple
 notarize it, through a notarytool profile stored once with `xcrun notarytool

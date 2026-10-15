@@ -1,6 +1,6 @@
 ---
 name: release
-description: Luster の新しい版を、Swift Package（GitHub Releases）・Maven Central・pub.dev に出し、公証した macOS 用アプリをリリースに添付する。「リリースして」「0.x.y を出したい」「新しいバージョンを公開」などのときに使う。
+description: Luster の新しい版を、Swift Package（GitHub Releases）・Maven Central・pub.dev・npm に出し、公証した macOS 用アプリをリリースに添付する。「リリースして」「0.x.y を出したい」「新しいバージョンを公開」などのときに使う。
 ---
 
 # Luster のリリース
@@ -15,11 +15,12 @@ description: Luster の新しい版を、Swift Package（GitHub Releases）・Ma
 | Maven Central（`dev.famio:luster`・`luster-compose`） | 同上 | できない |
 | Flutter の Android 用のビルド済みエンジン（`precompiled_<hash>` の prerelease） | 同上 | ― |
 | pub.dev（`luster`） | ユーザーが `dart pub publish` を実行したとき | できない（7 日以内なら retract のみ） |
+| npm（`@famio/luster`） | ユーザーが `npm publish` を実行したとき | 72 時間以内なら unpublish できるが、同じ版番号は二度と使えない |
 | macOS 用アプリ（公証済みの zip を GitHub のリリースに添付） | `gh release upload` したとき | 添付は消せる |
 
 ## 守ること
 
-- **取り消せない操作の前で必ず止めて、ユーザーの確認を取る**: `publish=true` の実行と `dart pub publish`。
+- **取り消せない操作の前で必ず止めて、ユーザーの確認を取る**: `publish=true` の実行、`dart pub publish`、`npm publish`。
 - `Scripts/release.sh`・push・`gh release create`・`gh workflow run` は、自動モードの安全判定で止められることがある。止められたら回避しようとせず、ユーザーに `!` を付けて実行してもらう（入力欄の先頭に `!` を付けるとシェルのモードになる、と添える）。
 - 各段階の「確認」をすべて満たしてから次へ進む。長い処理（`release.sh` は 5〜6 分、`publish=true` は 30〜40 分）はバックグラウンドで実行し、終わったら結果を読む。
 - ワークフローは `gh workflow run` を打った時点の **main の定義** で動き、中では `inputs.version` のタグをチェックアウトする。ワークフローを直したら、実行の前に main へ push する。
@@ -124,7 +125,18 @@ pub.dev は、手元の dry run では出ない指摘で **サーバー側で拒
 
 この場合、pub.dev の X はタグより後のコミットから出ることになる。そのコミットでも `flutter/luster/darwin/luster/Package.swift` をタグのもの（`git show X:flutter/luster/darwin/luster/Package.swift`）にしてから出す（コミットはしない。出したら `git checkout` で戻す）。違いをユーザーに伝える。
 
-## 7. macOS 用アプリ
+## 7. npm（ユーザーが実行する）
+
+`release.sh` が `Scripts/build-wasm.sh release` で作った engine をそのまま出す。`npm publish` の前に走る `prepack`（`web/luster/scripts/prepack.mjs`）が、トップの LICENSE と THIRD_PARTY_NOTICES.md をパッケージにコピーし、engine があること、debug ビルドでないこと、engine の `version()` が package.json の版と同じことを確かめる。合わなければ止まる。
+
+1. `cd web/luster && npm publish --dry-run`。17 ファイルで、LICENSE・THIRD_PARTY_NOTICES.md・`engine/luster_wasm_bg.wasm`（約 2.4 MB）が入っていること。
+2. ユーザーに実行してもらう（npm のログインと 2 段階認証が要る。`@famio` スコープは famio アカウントのもの）:
+   ```sh
+   cd web/luster && npm publish
+   ```
+3. 確認: `npm view @famio/luster version` が X。`https://cdn.jsdelivr.net/npm/@famio/luster@X/src/index.js` が 200。
+
+## 8. macOS 用アプリ
 
 公開済みのリリースにファイルを足すので、実行の前に一言確認する。
 
@@ -141,9 +153,9 @@ gh release upload X Apps/LusterMac/.build/Luster-X-macos.zip
 - 添付のあと、`https://github.com/famio/Luster/releases/download/X/Luster-X-macos.zip` がログインなしで 200
 - 必要なら、zip を `ditto -x -k` で展開して `xattr -w com.apple.quarantine "0081;$(printf %x $(date +%s));Safari;" Luster.app` でダウンロードの印を付け、`spctl --assess --type execute --verbose=2 Luster.app` が `accepted`。`unzip` で展開すると中身が崩れて「a sealed resource is missing or invalid」になる（zip の問題ではない）
 
-## 8. 仕上げ
+## 9. 仕上げ
 
-- README の Install 欄の版番号を X にして、コミット・push（Kotlin の `dev.famio:luster:X`・`luster-compose:X`、pub の `^X`、SwiftPM の `from:`）
+- README の Install 欄の版番号を X にして、コミット・push（Kotlin の `dev.famio:luster:X`・`luster-compose:X`、pub の `^X`、SwiftPM の `from:`、npm の `@famio/luster@X`）
 - 採点を見る（https://pub.dev/packages/luster/score 、公開から 1 時間以内に出る）。基準は 160/160。「Package is not compatible with the Flutter SDK」という SDK issues は、flutter_gpu の `dart:nativewrappers` が原因で点に影響しないので無視してよい
 - 必要なら利用者の立場で試す
   - Flutter: 新しいアプリに `luster: ^X` を入れて `fvm flutter build macos --debug`。`build/macos/SourcePackages/artifacts/` の下に `luster_dart.xcframework` が取ってこられていれば SPM 経由のエンジンが使われている。Android は rustup を除いた PATH で `fvm flutter build apk --debug` し、`build/**/precompiled/<hash>/` にファイルがあればビルド済みエンジン（rustup があると cargokit は既定でソースからビルドする）
