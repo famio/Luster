@@ -44,6 +44,10 @@ const SLOW_FRAME = 1 / 45;
 /** The coarsest the badge is drawn while turning. */
 const COARSEST = 0.4;
 
+/** Frames read together to judge the pace, by their median: one held up by
+ *  the page, by a collection or a mint landing, is not the drawing's cost. */
+const PACE_FRAMES = 9;
+
 /** How far back a flick's speed is read from, and how long a finger may rest
  *  before letting go for the flick to count, in milliseconds. */
 const FLICK_WINDOW = 100;
@@ -118,7 +122,12 @@ export class LusterView extends HTMLElement {
   #lastFrame = 0;
   #turningScale = 1;
   #turned = 0;
-  #frameTime = 0;
+  #intervals = [];
+  /** The scale and pace before the badge was last drawn coarser, until the
+   *  frames after show whether that helped. */
+  #tried = null;
+  /** Coarser did not help in this turn: it is not tried again until the next. */
+  #held = false;
 
   constructor() {
     super();
@@ -574,6 +583,8 @@ export class LusterView extends HTMLElement {
     } else {
       // At rest: drawn once more, at full resolution.
       this.#turned = 0;
+      this.#intervals = [];
+      this.#held = false;
       this.#draw();
     }
   }
@@ -583,13 +594,23 @@ export class LusterView extends HTMLElement {
    *  drawn in full. */
   #pace(dt) {
     if (++this.#turned <= 3 || dt === 0) return;
-    this.#frameTime = this.#frameTime === 0 ? dt : this.#frameTime * 0.7 + dt * 0.3;
-    if (this.#turned % 6 === 0 && this.#frameTime > SLOW_FRAME && this.#turningScale > COARSEST) {
+    this.#intervals.push(dt);
+    if (this.#intervals.length < PACE_FRAMES) return;
+    const pace = median(this.#intervals);
+    this.#intervals = [];
+    const tried = this.#tried;
+    this.#tried = null;
+    if (tried && pace > tried.pace * 0.85) {
+      // Coarser came no sooner: the frames wait on something else.
+      this.#turningScale = tried.scale;
+      this.#held = true;
+      return;
+    }
+    if (pace > SLOW_FRAME && this.#turningScale > COARSEST && !this.#held) {
       // A frame's cost goes with its pixels, the square of the scale.
-      const keepsUp = this.#turningScale * Math.sqrt(SLOW_FRAME / this.#frameTime) * 0.95;
+      const keepsUp = this.#turningScale * Math.sqrt(SLOW_FRAME / pace) * 0.95;
+      this.#tried = { scale: this.#turningScale, pace };
       this.#turningScale = Math.max(COARSEST, Math.min(keepsUp, this.#turningScale * 0.9));
-      this.#turned = 0;
-      this.#frameTime = 0;
     }
   }
 }
@@ -612,6 +633,11 @@ function metalColor(metal, metals) {
     }
   }
   return metals.gold;
+}
+
+function median(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[sorted.length >> 1];
 }
 
 if (!customElements.get('luster-view')) customElements.define('luster-view', LusterView);
