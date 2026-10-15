@@ -3,7 +3,12 @@
   "name": "luster",
   "compatibility_date": "2026-10-15",
   "assets": { "directory": "./dist" },
-  "routes": [{ "pattern": "luster.famio.dev", "custom_domain": true }],
+  "routes": [
+    { "pattern": "luster.famio.dev", "custom_domain": true },
+    // famio.dev's own Worker takes *.famio.dev/*, and routes come before a
+    // custom domain: this one is more specific, so it wins.
+    { "pattern": "luster.famio.dev/*", "zone_name": "famio.dev" }
+  ],
   "workers_dev": false,
   "preview_urls": false
 }
