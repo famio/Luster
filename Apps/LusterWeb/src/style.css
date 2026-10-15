@@ -7,9 +7,10 @@
   --hairline: rgb(0 0 0 / 0.08);
   --sidebar-edge: rgb(0 0 0 / 0.09);
   --drop-edge: rgb(192 138 46 / 0.55);
-  --section-label: #85858d;
-  --title-text: #707078;
-  --file-text: #8e8e95;
+  /* Text at least 4.5 times as light or dark as what it lies on. */
+  --section-label: #6b6b72;
+  --title-text: #636369;
+  --file-text: #6b6b72;
   --text: #1d1d1f;
   --drop-veil: rgb(242 241 238 / 0.8);
   --drop-text: #7a5a22;
@@ -17,6 +18,7 @@
   --button-hover: rgb(0 0 0 / 0.1);
   /* The browser's own, where it names it: the switches and the radios have it. */
   --accent: #0075ff;
+  /* White whatever the browser's AccentColorText says: Safari's is black. */
   --on-accent: #fff;
   --sidebar-width: 286px;
   --title-height: 44px;
@@ -31,9 +33,9 @@
     --hairline: rgb(255 255 255 / 0.06);
     --sidebar-edge: rgb(255 255 255 / 0.07);
     --drop-edge: rgb(255 204 133 / 0.55);
-    --section-label: #6c6c75;
+    --section-label: #8c8c94;
     --title-text: #83838c;
-    --file-text: #57575e;
+    --file-text: #8c8c94;
     --text: #e5e5e7;
     --drop-veil: rgb(8 8 10 / 0.74);
     --drop-text: #e0cfae;
@@ -42,7 +44,6 @@
   }
 }
 
-/* White on it whatever the browser says: Safari names black. */
 @supports (color: AccentColor) {
   :root { --accent: AccentColor; }
 }
@@ -72,6 +73,7 @@ body {
   border-bottom: 1px solid var(--hairline);
 }
 .title .name {
+  margin: 0;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 2.4px;

@@ -2,6 +2,7 @@
 
 const en = {
   open: 'Open SVG',
+  badge: 'The badge, which a drag turns',
   placeholder: 'Open an SVG to make a 3D badge.',
   drop: 'Drop an SVG',
   metal: 'Metal',
@@ -26,6 +27,7 @@ const en = {
 
 const ja = {
   open: 'SVG を読み込む',
+  badge: 'バッジ（ドラッグで回せます）',
   placeholder: 'SVG を読み込むと、3D バッジを作ります。',
   drop: 'SVG をドロップ',
   metal: '金属',

@@ -23,6 +23,9 @@ let exporting = false;
 /** Counts the files asked for, so one read late gives way to a later one. */
 let opened = 0;
 const metals = Luster.metals();
+// Heard of by the export that needs them.
+metals.catch(() => {});
+view.setAttribute('aria-label', t.badge);
 
 // Metal
 
