@@ -20,9 +20,9 @@ concurrency:
 jobs:
   deploy:
     # Only what was pushed here: a pull request's CI runs from a fork's branch,
-    # which may be called main too.
+    # which may be called main too. By hand, only from main.
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.event == 'push' &&
        github.event.workflow_run.head_repository.full_name == github.repository)
@@ -37,9 +37,15 @@ jobs:
       - run: rustup show active-toolchain || rustup toolchain install
         working-directory: rust
       - name: wasm-bindgen, the version luster-wasm pins
-        run: |
-          version=$(sed -nE 's/^wasm-bindgen = "=([0-9.]+)"/\1/p' rust/crates/luster-wasm/Cargo.toml)
-          cargo install wasm-bindgen-cli --version "$version" --locked
+        id: bindgen
+        run: echo "version=$(sed -nE 's/^wasm-bindgen = "=([0-9.]+)"/\1/p' rust/crates/luster-wasm/Cargo.toml)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        id: bindgen-cache
+        with:
+          path: ~/.cargo/bin/wasm-bindgen
+          key: wasm-bindgen-${{ runner.os }}-${{ steps.bindgen.outputs.version }}
+      - if: steps.bindgen-cache.outputs.cache-hit != 'true'
+        run: cargo install wasm-bindgen-cli --version "${{ steps.bindgen.outputs.version }}" --locked
       - run: Scripts/build-wasm.sh
       - run: npm ci
         working-directory: Apps/LusterWeb

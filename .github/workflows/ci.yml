@@ -31,7 +31,8 @@ jobs:
               "$(grep -m1 '^version = ' android/luster-compose/build.gradle.kts | cut -d'"' -f2)" \
               "$(node -p 'require("./web/luster/package.json").version')" \
               "$(node -p 'require("./web/luster/package-lock.json").version')" \
-              "$(node -p 'require("./web/luster/package-lock.json").packages[""].version')"; do
+              "$(node -p 'require("./web/luster/package-lock.json").packages[""].version')" \
+              "$(node -p 'require("./Apps/LusterWeb/package-lock.json").packages["../../web/luster"].version')"; do
             [ "$found" = "$engine" ] || { echo "a version is $found, the engine's is $engine" >&2; exit 1; }
           done
 
@@ -49,8 +50,9 @@ jobs:
         working-directory: rust
       - run: Scripts/parity.sh
 
-  # The same documents struck by the engine built for WebAssembly, as the web
-  # strikes them, and the web package's own tests.
+  # The same documents struck by the engine built for WebAssembly and run by
+  # Node; then the web's own build: the package's tests, its engine, the
+  # package as npm would pack it, and the site.
   same-badges-wasm:
     runs-on: ubuntu-latest
     steps:
@@ -64,6 +66,21 @@ jobs:
       - run: Scripts/parity.sh wasm
       - run: npm test
         working-directory: web/luster
+      - name: wasm-bindgen, the version luster-wasm pins
+        id: bindgen
+        run: echo "version=$(sed -nE 's/^wasm-bindgen = "=([0-9.]+)"/\1/p' rust/crates/luster-wasm/Cargo.toml)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        id: bindgen-cache
+        with:
+          path: ~/.cargo/bin/wasm-bindgen
+          key: wasm-bindgen-${{ runner.os }}-${{ steps.bindgen.outputs.version }}
+      - if: steps.bindgen-cache.outputs.cache-hit != 'true'
+        run: cargo install wasm-bindgen-cli --version "${{ steps.bindgen.outputs.version }}" --locked
+      - run: Scripts/build-wasm.sh
+      - run: npm pack --dry-run
+        working-directory: web/luster
+      - run: npm ci && npm run build
+        working-directory: Apps/LusterWeb
 
   swift:
     runs-on: macos-latest
