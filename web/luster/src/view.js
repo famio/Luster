@@ -371,7 +371,13 @@ export class LusterView extends HTMLElement {
   }
 
   async #load() {
-    if (!this.#live || this.#broken) return;
+    if (!this.#live) return;
+    // A studio that would not set up is tried again for what is asked next,
+    // and fails it if it still will not.
+    if (this.#broken) {
+      this.#broken = null;
+      this.#studioReady = this.#setUp();
+    }
     this.#giveUp();
     const mine = ++this.#generation;
     this.#key = this.#currentKey();
