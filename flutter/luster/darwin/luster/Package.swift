@@ -8,7 +8,8 @@ import PackageDescription
 // (Scripts/release.sh rewrites this target).
 let engine: Target = .binaryTarget(
     name: "luster_dart",
-    path: "luster_dart.xcframework"
+    url: "https://github.com/famio/Luster/releases/download/0.4.0/luster_dart.xcframework.zip",
+    checksum: "f0a278aad9af232ba22ec15925fec46cd01291d032b3d017a0dcbc14027ca96d"
 )
 
 let package = Package(

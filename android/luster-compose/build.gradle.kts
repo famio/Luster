@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "dev.famio"
-version = "0.3.0"
+version = "0.4.0"
 
 android {
     namespace = "dev.famio.luster.compose"
