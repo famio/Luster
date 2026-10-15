@@ -132,3 +132,38 @@ test('closing rejects what is under way', async () => {
   await assert.rejects(asked, { name: 'AbortError' });
   assert.equal(FakeWorker.all[0].ended, true);
 });
+
+test('a worker found unfit is ended, and its badges and its mint go elsewhere', async () => {
+  const mints = fresh();
+  const kept = mints.request(doc(1), plain);
+  finish(FakeWorker.all[0], 0);
+  const held = await kept;
+  const asked = mints.request(doc(2), plain);
+  const [unfit] = FakeWorker.all;
+  assert.equal(unfit.mints.length, 2);
+  mints.discard(unfit);
+  assert.ok(unfit.ended);
+  assert.ok(!mints.holds(held));
+  // The second mint starts again on a worker of its own.
+  await tick();
+  const fresh2 = FakeWorker.all.at(-1);
+  assert.notEqual(fresh2, unfit);
+  finish(fresh2, 0, 7);
+  assert.equal((await asked).id, 7);
+});
+
+test('a settled mint lets go of the signal it was given', async () => {
+  const mints = fresh();
+  const controller = new AbortController();
+  let listening = 0;
+  const signal = controller.signal;
+  const add = signal.addEventListener.bind(signal);
+  const remove = signal.removeEventListener.bind(signal);
+  signal.addEventListener = (...a) => (listening++, add(...a));
+  signal.removeEventListener = (...a) => (listening--, remove(...a));
+  const asked = mints.request(doc(1), plain, signal);
+  assert.equal(listening, 1);
+  finish(FakeWorker.all[0], 0);
+  await asked;
+  assert.equal(listening, 0);
+});

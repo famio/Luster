@@ -93,8 +93,8 @@ export class LusterBadge {
   readonly textures: readonly Sheet[];
   /** The badge as a glTF binary: meshes, materials and textures in one file,
    *  its metal plated in `metal` (the engine's pale gold unless given),
-   *  `scale` badge-widths across. The same badge always writes the same
-   *  bytes. */
+   *  `scale` units (metres, in glTF) across. The same badge always writes the
+   *  same bytes. An aborted `signal` rejects with its reason. */
   glb(options?: { scale?: number; metal?: Rgba; signal?: AbortSignal }): Promise<Uint8Array>;
 }
 
@@ -103,12 +103,14 @@ export class LusterBadge {
 export type LusterSource = string | URL | Uint8Array | ArrayBuffer;
 
 export declare const Luster: {
-  /** Larger documents are refused before they are read in full. */
+  /** Larger documents are refused: before they are fetched in full when the
+   *  server says how large they are. */
   readonly maximumBytes: number;
   /** What a URL source is fetched with: `fetch` unless the page sets another. */
-  loader: (url: URL, signal?: AbortSignal) => Promise<Uint8Array>;
+  loader: (url: URL, signal?: AbortSignal) => Promise<Uint8Array | ArrayBuffer>;
   /** Fetches and compiles the engine. A mint does it itself; calling it early
-   *  gets it done before the first badge is wanted. */
+   *  gets it done before the first badge is wanted. It is done once, and
+   *  tried again after a failure. */
   init(): Promise<void>;
   /** The engine's version. */
   version(): Promise<string>;
@@ -118,7 +120,8 @@ export declare const Luster: {
    *  run at once across the page; the rest wait their turn. Recent badges are
    *  kept by their bytes and options, so asking again is immediate, and asking
    *  for one already being minted waits for that mint rather than starting
-   *  another. Fails with a `LusterError`. */
+   *  another. Fails with a `LusterError`; an aborted `signal` rejects with
+   *  its reason, and `Luster.close()` with an `AbortError`. */
   mint(source: LusterSource, options?: MintOptions): Promise<LusterBadge>;
   /** Ends the workers, letting go of their memory, which a module never gives
    *  back while it lives. Mints under way reject; badges already made keep

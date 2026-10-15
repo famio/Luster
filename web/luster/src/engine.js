@@ -57,7 +57,7 @@ export class Engine {
       if (data.error) call.reject(data.error);
       else call.resolve(data.result);
     };
-    // A worker that cannot load its script or its module answers nothing.
+    // Its script or its module failed to load: the worker is no use.
     this.worker.onerror = (event) => {
       event.preventDefault?.();
       this.end({ kind: 'engineFailure', message: event.message || 'the engine could not start', trapped: true });
@@ -118,14 +118,15 @@ export class Engine {
 /** A worker of its own for what is not a mint. */
 let helper;
 
-/** Asks the helper; one that fails is ended, and the next ask starts another. */
+/** Asks the helper. One that traps or ends is let go, and the next ask starts
+ *  another; a call that only failed leaves it for the others. */
 export async function ask(op, args) {
   const asked = (helper ??= new Engine());
   try {
     return await asked.run(op, args);
   } catch (e) {
     // Not one started since, after this one was ended.
-    if (helper === asked) endHelper();
+    if ((e instanceof Gone || e?.trapped) && helper === asked) endHelper();
     throw e;
   }
 }

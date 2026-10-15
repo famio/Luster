@@ -76,12 +76,27 @@ export class Mints {
     return worker;
   }
 
-  /** Ends a worker, and with it everything it holds. */
+  /** Ends a worker, and with it everything it holds. A mint it was running
+   *  for someone still waiting goes back to the head of the queue. */
   fire(worker) {
     worker.terminate();
     this.workers.delete(worker);
     this.idle = this.idle.filter((w) => w !== worker);
     this.recent = this.recent.filter((k) => k.worker !== worker);
+    for (const flights of this.flights.values()) {
+      for (const flight of flights) {
+        if (flight.worker !== worker) continue;
+        flight.worker = null;
+        this.queue.unshift(flight);
+      }
+    }
+  }
+
+  /** A worker found unfit, as by a trap: ended, and its work started again. */
+  discard(worker) {
+    if (!this.workers.has(worker)) return;
+    this.fire(worker);
+    this.pump();
   }
 
   land(flight, worker, id, badge) {
@@ -155,30 +170,28 @@ class Flight {
     this.svg = svg;
     this.options = options;
     this.worker = null;
-    this.waiting = 0;
-    /** @type {Set<{resolve: Function, reject: Function}>} */
+    /** @type {Set<{resolve: Function, reject: Function, unlisten: Function}>} */
     this.waiters = new Set();
   }
 
   wait(signal, abandoned) {
     return new Promise((resolve, reject) => {
-      const waiter = { resolve, reject };
+      const onAbort = () => {
+        this.waiters.delete(waiter);
+        reject(signal.reason);
+        if (this.waiters.size === 0) abandoned();
+      };
+      // Let go of once settled: a signal kept for many mints would otherwise
+      // hold every flight, and its document, until it aborts.
+      const waiter = { resolve, reject, unlisten: () => signal?.removeEventListener('abort', onAbort) };
       this.waiters.add(waiter);
-      this.waiting++;
-      signal?.addEventListener(
-        'abort',
-        () => {
-          if (!this.waiters.delete(waiter)) return;
-          reject(signal.reason);
-          if (--this.waiting === 0) abandoned();
-        },
-        { once: true },
-      );
+      signal?.addEventListener('abort', onAbort, { once: true });
     });
   }
 
   settle(kept, error) {
-    for (const { resolve, reject } of this.waiters) {
+    for (const { resolve, reject, unlisten } of this.waiters) {
+      unlisten();
       if (error) reject(error);
       else resolve(kept);
     }

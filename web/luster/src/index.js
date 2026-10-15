@@ -6,7 +6,6 @@ import { Mints } from './mints.js';
 
 export { LusterError };
 
-/** Larger documents are refused before they are read in full. */
 const MAXIMUM_BYTES = 20 << 20;
 
 let mints;
@@ -21,19 +20,22 @@ async function ask(op) {
 }
 
 export const Luster = {
-  /** Larger documents are refused before they are read in full. */
-  maximumBytes: MAXIMUM_BYTES,
+  /** Larger documents are refused: before they are fetched in full when the
+   *  server says how large they are. */
+  get maximumBytes() {
+    return MAXIMUM_BYTES;
+  },
 
   /**
    * What a URL source is fetched with: `fetch` unless the page sets another.
-   * @type {(url: URL, signal?: AbortSignal) => Promise<Uint8Array>}
+   * @type {(url: URL, signal?: AbortSignal) => Promise<Uint8Array | ArrayBuffer>}
    */
   loader: fetchBytes,
 
   /**
    * Fetches and compiles the engine. A mint does it itself; calling it early
-   * gets it done before the first badge is wanted. Later calls return the
-   * first call's promise, unless it failed.
+   * gets it done before the first badge is wanted. It is done once, and tried
+   * again after a failure.
    */
   init() {
     return compile().then(() => undefined);
@@ -57,8 +59,9 @@ export const Luster = {
    * Recent badges are kept by their bytes and options, so asking again is
    * immediate, and asking for one already being minted waits for that mint
    * rather than starting another. An aborted `signal` rejects with its
-   * reason, and the mint stops once no one else is waiting for it. Fails
-   * with a `LusterError` when the document, its source or the engine fails.
+   * reason, and the mint stops once no one else is waiting for it, as
+   * `Luster.close()` stops it with an `AbortError`. Fails with a `LusterError`
+   * when the document, its source or the engine fails.
    *
    * @param {string | URL | Uint8Array | ArrayBuffer} source
    * @param {{ withoutHiddenFaces?: boolean, metalLines?: boolean, signal?: AbortSignal }} [options]
@@ -114,21 +117,26 @@ export class LusterBadge {
   /**
    * The badge as a glTF binary: meshes, materials and textures in one file,
    * its metal plated in `metal` (the engine's pale gold unless given), `scale`
-   * badge-widths across. The same badge always writes the same bytes.
+   * units (metres, in glTF) across. The same badge always writes the same
+   * bytes. An aborted `signal` rejects with its reason.
    *
    * @param {{ scale?: number, metal?: { r: number, g: number, b: number, a: number }, signal?: AbortSignal }} [options]
    * @returns {Promise<Uint8Array>}
    */
   async glb({ scale = 1, metal, signal } = {}) {
+    signal?.throwIfAborted();
     // A worker ended under it once is no reason to fail; twice running is.
     for (let attempt = 0; ; attempt++) {
       if (!page().holds(this.#kept)) {
         // The worker that held it was ended, or it was let go: strike it again.
         this.#kept = await strike(this.#svg, this.#options, signal);
       }
+      const { worker } = this.#kept;
       try {
-        return await this.#kept.worker.glb(this.#kept.id, scale, metal);
+        return await worker.glb(this.#kept.id, scale, metal);
       } catch (e) {
+        // A trap leaves the worker unfit for anything after.
+        if (e?.trapped) page().discard(worker);
         if (!(e instanceof Gone || e?.gone) || attempt > 0) throw engineError(e);
         // Ended while it waited; try again with what replaces it.
       }
@@ -145,12 +153,16 @@ async function load(source, signal) {
     if (source.protocol !== 'https:' && source.protocol !== 'http:') {
       throw new TypeError(`a web source is http(s), not ${source.protocol}`);
     }
+    let loaded;
     try {
-      bytes = await Luster.loader(source, signal);
+      loaded = await Luster.loader(source, signal);
     } catch (e) {
       if (e instanceof LusterError || signal?.aborted) throw e;
       throw new LusterError('unreadableSource', `could not fetch ${source}: ${e.message ?? e}`);
     }
+    if (loaded instanceof Uint8Array) bytes = loaded;
+    else if (loaded instanceof ArrayBuffer) bytes = new Uint8Array(loaded);
+    else throw new TypeError('Luster.loader gives the bytes it fetched, a Uint8Array or an ArrayBuffer');
   } else {
     throw new TypeError('a source is SVG text, its bytes, or a URL');
   }

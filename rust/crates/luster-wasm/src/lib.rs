@@ -1,8 +1,7 @@
 //! JavaScript API, described for TypeScript in `ABOUT` below.
 
-use std::sync::Once;
 
-use luster_core::{CancelToken, badge, style, texture, vertex as mesh};
+use luster_core::{CancelToken, badge, style, texture};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen(typescript_custom_section)]
@@ -26,13 +25,11 @@ extern "C" {
     fn console_error(message: &str);
 }
 
-/// A trap leaves the worker only its own "unreachable": the engine's message
-/// goes to the console first. Set by whatever does the engine's work.
+/// A trap leaves only its own "unreachable": the engine's message goes to the
+/// console first, wherever the module is instantiated.
+#[wasm_bindgen(start)]
 fn report_panics() {
-    static SET: Once = Once::new();
-    SET.call_once(|| {
-        std::panic::set_hook(Box::new(|info| console_error(&format!("luster: {info}"))));
-    });
+    std::panic::set_hook(Box::new(|info| console_error(&format!("luster: {info}"))));
 }
 
 /// The engine's version.
@@ -143,8 +140,9 @@ pub struct Material {
     pub texture: Option<u32>,
 }
 
-/// One submesh: its vertices interleaved as `vertexLayout` says, and three
-/// indices a triangle, wound counter-clockwise seen from outside. Each field
+/// One submesh: its vertices interleaved twelve floats each, position (3),
+/// normal (3), texture coordinates (2, v running down the image, as glTF's)
+/// and tangent (4, w the handedness), and three indices a triangle, wound counter-clockwise seen from outside. Each field
 /// read is a fresh copy; read it once.
 #[wasm_bindgen(getter_with_clone)]
 pub struct Submesh {
@@ -165,36 +163,6 @@ pub struct Submesh {
     /// The highest corner.
     #[wasm_bindgen(readonly)]
     pub max: Vec<f32>,
-}
-
-/// Where each attribute sits in a vertex, in floats, as three.js's
-/// `InterleavedBuffer` counts: position (3), normal (3), texture coordinates
-/// (2, v running down the image, as glTF's) and tangent (4, w the
-/// handedness).
-#[wasm_bindgen]
-pub struct VertexLayout {
-    #[wasm_bindgen(readonly)]
-    pub stride: u32,
-    #[wasm_bindgen(readonly)]
-    pub position: u32,
-    #[wasm_bindgen(readonly)]
-    pub normal: u32,
-    #[wasm_bindgen(readonly)]
-    pub uv: u32,
-    #[wasm_bindgen(readonly)]
-    pub tangent: u32,
-}
-
-#[wasm_bindgen(js_name = vertexLayout)]
-pub fn vertex_layout() -> VertexLayout {
-    let floats = |bytes: usize| (bytes / size_of::<f32>()) as u32;
-    VertexLayout {
-        stride: floats(mesh::VERTEX_STRIDE),
-        position: floats(mesh::POSITION_OFFSET),
-        normal: floats(mesh::NORMAL_OFFSET),
-        uv: floats(mesh::UV_OFFSET),
-        tangent: floats(mesh::TANGENT_OFFSET),
-    }
 }
 
 /// RGBA8, rows top to bottom. Colour textures are sRGB-encoded; a normal map
@@ -256,7 +224,6 @@ impl LusterBadge {
     }
 
     pub fn submeshes(&self) -> Vec<Submesh> {
-        report_panics();
         self.0
             .submeshes
             .iter()
@@ -290,7 +257,6 @@ impl LusterBadge {
     /// In the order `Material.texture` indexes them. Each call builds the mip
     /// chains again; keep the result.
     pub fn textures(&self) -> Vec<Sheet> {
-        report_panics();
         self.0
             .textures
             .iter()
@@ -308,7 +274,6 @@ impl LusterBadge {
     /// The badge as a glTF binary, `scale` units (metres, in glTF) across and
     /// plated in `metal`.
     pub fn glb(&self, scale: f32, metal: &Rgba) -> Vec<u8> {
-        report_panics();
         luster_core::export::glb(&self.0, scale, (*metal).into())
     }
 }
@@ -349,7 +314,6 @@ fn flag(options: &JsValue, name: &str) -> bool {
 /// colours. Throws a `LusterError`.
 #[wasm_bindgen]
 pub fn mint(svg: &[u8], options: Option<MintOptionsArg>) -> Result<LusterBadge, JsValue> {
-    report_panics();
     let options = options.map(JsValue::from).unwrap_or(JsValue::UNDEFINED);
     let options = if options.is_object() {
         badge::MintOptions {
@@ -382,7 +346,6 @@ fn error(e: luster_core::Error) -> JsValue {
 /// few milliseconds; keep the result.
 #[wasm_bindgen(js_name = showcaseEnvironment)]
 pub fn showcase_environment() -> Texture {
-    report_panics();
     texture::showcase_environment().into()
 }
 
@@ -398,18 +361,10 @@ fn face(size: u32) -> Result<u32, JsError> {
     }
 }
 
-/// The showcase's panorama as a cubemap: six `size` square faces stacked in
-/// one image, in the order +X, -X, +Y, -Y, +Z, -Z.
-#[wasm_bindgen(js_name = showcaseCubemap)]
-pub fn showcase_cubemap(size: u32) -> Result<Texture, JsError> {
-    report_panics();
-    Ok(texture::showcase_cubemap(face(size)?).into())
-}
-
-/// What a diffuse surface receives from the showcase, in the same layout.
+/// What a diffuse surface receives from the showcase: six `size` square faces
+/// stacked in one image, in the order +X, -X, +Y, -Y, +Z, -Z.
 #[wasm_bindgen(js_name = showcaseIrradiance)]
 pub fn showcase_irradiance(size: u32) -> Result<Texture, JsError> {
-    report_panics();
     Ok(texture::showcase_irradiance(face(size)?).into())
 }
 
@@ -417,7 +372,6 @@ pub fn showcase_irradiance(size: u32) -> Result<Texture, JsError> {
 /// same for every badge.
 #[wasm_bindgen]
 pub fn sandblast() -> Texture {
-    report_panics();
     texture::sandblast().into()
 }
 
