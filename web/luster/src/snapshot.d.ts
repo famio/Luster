@@ -19,11 +19,18 @@ export interface LusterStillOptions {
 /**
  * A badge drawn as `<luster-view>` draws it, into a still image, without an
  * element: for thumbnails in a list, where a live view of each badge would
- * cost far more than the picture is worth.
+ * cost far more than the picture is worth. Each takes a badge, or a source to
+ * strike one from with the mint's options.
  */
 export declare const LusterSnapshot: {
-  /** A square PNG of the badge. */
-  image(badge: LusterBadge, options?: LusterStillOptions): Promise<Blob>;
-  /** The same, for the badge `source` strikes with the mint's options. */
-  fromSource(source: LusterSource, options?: LusterStillOptions & MintOptions): Promise<Blob>;
+  /** A square still as an `ImageBitmap`: the picture itself, written into no
+   *  file, for a canvas to draw (`bitmaprenderer` takes it without a copy). */
+  image(of: LusterBadge | LusterSource, options?: LusterStillOptions & MintOptions): Promise<ImageBitmap>;
+  /** The same still as a file: a PNG, or `type` with its `quality` where the
+   *  browser writes it (`image/webp` in Chrome and Firefox; Safari writes
+   *  PNG). The blob's `type` says which it is. */
+  blob(
+    of: LusterBadge | LusterSource,
+    options?: LusterStillOptions & MintOptions & { type?: string; quality?: number },
+  ): Promise<Blob>;
 };

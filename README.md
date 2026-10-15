@@ -173,7 +173,7 @@ import { LusterSnapshot } from '@famio/luster/snapshot';
 
 const badge = await Luster.mint(svg, { metalLines: true });
 const glb = await badge.glb();
-const still = await LusterSnapshot.image(badge, { pixelSize: 512 });  // PNG Blob
+const still = await LusterSnapshot.image(badge, { pixelSize: 512 });  // ImageBitmap
 ```
 
 - **Stills** look as the view does. A list or a grid wants stills rather than a live

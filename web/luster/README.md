@@ -89,12 +89,17 @@ RealityKit's.
 ```js
 import { LusterSnapshot } from '@famio/luster/snapshot';
 
-const png = await LusterSnapshot.image(badge, { pixelSize: 512, metal: 'silver' });
-image.src = URL.createObjectURL(png);
+const still = await LusterSnapshot.image(badge, { pixelSize: 512, metal: 'silver' });
+canvas.getContext('bitmaprenderer').transferFromImageBitmap(still);
+
+const file = await LusterSnapshot.blob(svg, { metalLines: true, type: 'image/webp' });
 ```
 
 A still is the picture a view shows, at the resting pose unless `tilt` and `spin` say
-otherwise, as a PNG `Blob`. A list or a grid wants stills rather than a live view per
-row. It is transparent round the badge unless it is given a `background`, a `#rrggbb`
-colour or one in sRGB from 0 to 1. `LusterSnapshot.fromSource` mints the badge first,
-taking the mint's options too. It draws with three.js, as the view does.
+otherwise. A list or a grid wants stills rather than a live view per row. `image` gives
+an `ImageBitmap`, written into no file, for a canvas to draw; `blob` writes a PNG, or
+the `type` asked for where the browser writes it (WebP in Chrome and Firefox; Safari
+writes PNG), for saving or sending. Either takes a badge, or a source to strike one from
+with the mint's options. A still is transparent round the badge unless it is given a
+`background`, a `#rrggbb` colour or one in sRGB from 0 to 1. It draws with three.js, as
+the view does.
