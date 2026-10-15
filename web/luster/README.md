@@ -54,13 +54,15 @@ JIT, and a mint takes some fifteen times as long: try one on a phone over https.
 
 The view draws with [three.js](https://threejs.org), which the page provides (`three`
 0.186, whose shader chunks it builds on; a page without a bundler maps it with an
-import map). Drag to turn the
-badge; a flick keeps it spinning briefly, unless the system asks for reduced motion or
-`momentum` is false. Pinch, on a trackpad or with two fingers, to bring it up to five
-times closer, and slide two fingers to look about it; a double click or tap puts it
-back. `zoomable` set to false leaves it at its size. `metal` is `gold`, `silver`, `copper` or a `#rrggbb` colour, and
-`lighting` is `showcase` or `off`; `metal-lines` and `without-hidden-faces` are the
-mint's options, and the `source` property takes SVG text or bytes in place of `src`.
+import map). Drag to turn the badge; a flick keeps it spinning briefly, unless the
+system asks for reduced motion or `momentum` is false. Pinch, on a trackpad or with
+two fingers, to bring it up to five times closer, and slide two fingers to look about
+it; a double click or tap puts it back, and `zoomable` set to false leaves it at its
+size. Both are on unless their attribute says otherwise: `momentum="false"`,
+`zoomable="false"`, as `draggable="false"` does. `metal` is `gold`, `silver`, `copper`
+or a `#rrggbb` colour, and `lighting` is `showcase` or `off`; `metal-lines` and
+`without-hidden-faces` are the mint's options, and the `source` property takes SVG
+text or bytes in place of `src`.
 
 The children are a placeholder, shown in the middle until the badge is on screen. The
 element's `state` attribute is `minting`, `ready`, `failed` or `idle`, for styling it,

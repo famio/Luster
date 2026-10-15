@@ -80,7 +80,7 @@ const reducedMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)'
  * or idle without a source.
  */
 export class LusterView extends HTMLElement {
-  static observedAttributes = ['src', 'metal', 'lighting', 'metal-lines', 'without-hidden-faces'];
+  static observedAttributes = ['src', 'metal', 'lighting', 'metal-lines', 'without-hidden-faces', 'zoomable'];
 
   #shadow;
   #canvas;
@@ -235,34 +235,28 @@ export class LusterView extends HTMLElement {
     this.toggleAttribute('without-hidden-faces', Boolean(value));
   }
 
+  // On unless the attribute says "false", as `draggable` and `spellcheck`
+  // are: an attribute that is there or not can only turn a thing on.
+
   /** Whether a flick keeps the badge turning; never while the system asks
    *  for reduced motion. */
   get momentum() {
-    return this.#momentum;
+    return this.getAttribute('momentum') !== 'false';
   }
 
   set momentum(value) {
-    this.#momentum = Boolean(value);
+    this.setAttribute('momentum', String(Boolean(value)));
   }
-
-  #momentum = true;
 
   /** Whether a pinch brings the badge closer. Off, the badge is put back at
    *  its size and a pinch is the page's. */
   get zoomable() {
-    return this.#zoomable;
+    return this.getAttribute('zoomable') !== 'false';
   }
 
   set zoomable(value) {
-    this.#zoomable = Boolean(value);
-    if (!this.#zoomable) {
-      this.#pinch = null;
-      this.#gesture = null;
-      this.#see(1, { x: 0, y: 0 }, { x: 0, y: 0 });
-    }
+    this.setAttribute('zoomable', String(Boolean(value)));
   }
-
-  #zoomable = true;
 
   /** `idle`, `minting`, `ready` or `failed`. */
   get state() {
@@ -285,6 +279,12 @@ export class LusterView extends HTMLElement {
       if (!this.#sourceSet) this.#load();
     } else if (name === 'metal-lines' || name === 'without-hidden-faces') {
       this.#load();
+    } else if (name === 'zoomable') {
+      if (!this.zoomable) {
+        this.#pinch = null;
+        this.#gesture = null;
+        this.#see(1, { x: 0, y: 0 }, { x: 0, y: 0 });
+      }
     } else {
       this.#appear();
     }
@@ -557,7 +557,7 @@ export class LusterView extends HTMLElement {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     if (!this.#badge) return;
     if (e.pointerType === 'touch') this.#touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (this.#touches.size === 2 && this.#zoomable) {
+    if (this.#touches.size === 2 && this.zoomable) {
       // A second finger: the drag gives way to a pinch, without a flick.
       this.#pointer = null;
       this.#velocity = 0;
@@ -682,7 +682,7 @@ export class LusterView extends HTMLElement {
   }
 
   #wheel(e) {
-    if (!this.#badge || !this.#zoomable) return;
+    if (!this.#badge || !this.zoomable) return;
     const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? this.clientHeight : 1;
     if (e.ctrlKey) {
       e.preventDefault();
@@ -703,7 +703,7 @@ export class LusterView extends HTMLElement {
   // Safari's own, for a trackpad; on a phone the fingers are pointers, and
   // the page is kept from zooming either way.
   #gestureStart(e) {
-    if (!this.#zoomable) return;
+    if (!this.zoomable) return;
     e.preventDefault();
     if (!this.#badge || this.#touches.size > 0) return;
     const at = this.#at(e.clientX, e.clientY);
@@ -711,14 +711,14 @@ export class LusterView extends HTMLElement {
   }
 
   #gestureChange(e) {
-    if (!this.#zoomable) return;
+    if (!this.zoomable) return;
     e.preventDefault();
     const gesture = this.#gesture;
     if (gesture) this.#see(gesture.zoom * e.scale, gesture.point, gesture.at);
   }
 
   #gestureEnd(e) {
-    if (!this.#zoomable) return;
+    if (!this.zoomable) return;
     e.preventDefault();
     this.#gesture = null;
   }

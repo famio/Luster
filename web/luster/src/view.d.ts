@@ -21,7 +21,8 @@ export interface LusterStateChange {
  * badge struck later takes the place of the one on screen without it.
  *
  * Attributes: `src`, `metal`, `lighting`, `metal-lines`,
- * `without-hidden-faces`. Fires `statechange` on every change.
+ * `without-hidden-faces`, and `momentum` and `zoomable`, which are on unless
+ * set to `"false"`. Fires `statechange` on every change.
  */
 export class LusterView extends HTMLElement {
   /** SVG text, its bytes, or a URL; over `src` once set. Null shows nothing. */
