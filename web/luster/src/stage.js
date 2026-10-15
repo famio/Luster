@@ -247,6 +247,7 @@ class Studio {
       tiltLimit: handling.tiltLimit,
       restingTilt: handling.restingTilt,
       restingSpin: handling.restingSpin,
+      closest: handling.closest,
     };
     handling.free();
     this.lights = here.studioLights().map((l) => {
@@ -680,11 +681,24 @@ export class Stage {
       .multiply(new THREE.Quaternion().setFromAxisAngle(Y, spin));
   }
 
-  /** Draws the stage into `context`, `width` by `height` device pixels. */
-  draw(context, width, height) {
+  /** Draws the stage into `context`, `width` by `height` device pixels:
+   *  `zoom` times closer than the badge fits, looking at `look`, a point of
+   *  that fitting frame in fractions of it from its middle, down positive. */
+  draw(context, width, height, zoom = 1, look = { x: 0, y: 0 }) {
     const aspect = width / Math.max(height, 1);
     this.camera.fov = this.studio.engine.fieldOfView(this.wide, this.tall, aspect);
     this.camera.aspect = aspect;
+    // A part of that frame, seen from where the camera stands: the light and
+    // its reflections stay as they are.
+    if (zoom === 1) {
+      this.camera.clearViewOffset();
+    } else {
+      const fullWidth = width * zoom;
+      const fullHeight = height * zoom;
+      const x = (fullWidth - width) / 2 + look.x * fullWidth;
+      const y = (fullHeight - height) / 2 + look.y * fullHeight;
+      this.camera.setViewOffset(fullWidth, fullHeight, x, y, width, height);
+    }
     this.camera.updateProjectionMatrix();
     return this.studio.draw(this.scene, this.camera, width, height, context);
   }

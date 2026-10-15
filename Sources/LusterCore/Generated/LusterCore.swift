@@ -1288,6 +1288,10 @@ public struct Handling: Equatable, Hashable {
      */
     public var restingTilt: Float
     public var restingSpin: Float
+    /**
+     * The closest a pinch brings the badge, times its size at rest.
+     */
+    public var closest: Float
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -1297,12 +1301,16 @@ public struct Handling: Equatable, Hashable {
          */spinPerPoint: Float, tiltPerPoint: Float, tiltLimit: Float, 
         /**
          * Where the badge sits before it is touched, radians.
-         */restingTilt: Float, restingSpin: Float) {
+         */restingTilt: Float, restingSpin: Float, 
+        /**
+         * The closest a pinch brings the badge, times its size at rest.
+         */closest: Float) {
         self.spinPerPoint = spinPerPoint
         self.tiltPerPoint = tiltPerPoint
         self.tiltLimit = tiltLimit
         self.restingTilt = restingTilt
         self.restingSpin = restingSpin
+        self.closest = closest
     }
 
     
@@ -1325,7 +1333,8 @@ public struct FfiConverterTypeHandling: FfiConverterRustBuffer {
                 tiltPerPoint: FfiConverterFloat.read(from: &buf), 
                 tiltLimit: FfiConverterFloat.read(from: &buf), 
                 restingTilt: FfiConverterFloat.read(from: &buf), 
-                restingSpin: FfiConverterFloat.read(from: &buf)
+                restingSpin: FfiConverterFloat.read(from: &buf), 
+                closest: FfiConverterFloat.read(from: &buf)
         )
     }
 
@@ -1335,6 +1344,7 @@ public struct FfiConverterTypeHandling: FfiConverterRustBuffer {
         FfiConverterFloat.write(value.tiltLimit, into: &buf)
         FfiConverterFloat.write(value.restingTilt, into: &buf)
         FfiConverterFloat.write(value.restingSpin, into: &buf)
+        FfiConverterFloat.write(value.closest, into: &buf)
     }
 }
 
@@ -1511,6 +1521,69 @@ public func FfiConverterTypeLightingPreset_lift(_ buf: RustBuffer) throws -> Lig
 #endif
 public func FfiConverterTypeLightingPreset_lower(_ value: LightingPreset) -> RustBuffer {
     return FfiConverterTypeLightingPreset.lower(value)
+}
+
+
+/**
+ * What a view shows of the badge brought closer: `zoom` times its size at
+ * rest, centred on `x`, `y`, a point of the frame it fits at rest, in
+ * fractions of that frame from its middle, x to the right and y down.
+ */
+public struct Look: Equatable, Hashable {
+    public var zoom: Float
+    public var x: Float
+    public var y: Float
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(zoom: Float, x: Float, y: Float) {
+        self.zoom = zoom
+        self.x = x
+        self.y = y
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension Look: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeLook: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Look {
+        return
+            try Look(
+                zoom: FfiConverterFloat.read(from: &buf), 
+                x: FfiConverterFloat.read(from: &buf), 
+                y: FfiConverterFloat.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: Look, into buf: inout [UInt8]) {
+        FfiConverterFloat.write(value.zoom, into: &buf)
+        FfiConverterFloat.write(value.x, into: &buf)
+        FfiConverterFloat.write(value.y, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLook_lift(_ buf: RustBuffer) throws -> Look {
+    return try FfiConverterTypeLook.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLook_lower(_ value: Look) -> RustBuffer {
+    return FfiConverterTypeLook.lower(value)
 }
 
 
@@ -2573,6 +2646,23 @@ public func lightingPreset(lighting: Lighting) -> LightingPreset  {
 })
 }
 /**
+ * Brings the badge `zoom` times closer with the point of its frame at
+ * `point_x`, `point_y` seen at `at_x`, `at_y` in the view (fractions of it
+ * from its middle, y down), as near as the frame lets it.
+ */
+public func look(zoom: Float, pointX: Float, pointY: Float, atX: Float, atY: Float) -> Look  {
+    return try!  FfiConverterTypeLook_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_luster_ffi_fn_func_look(
+        FfiConverterFloat.lower(zoom),
+        FfiConverterFloat.lower(pointX),
+        FfiConverterFloat.lower(pointY),
+        FfiConverterFloat.lower(atX),
+        FfiConverterFloat.lower(atY),uniffiCallStatus
+    )
+})
+}
+/**
  * The badge's reverse: a tangent-space normal map of sandblasted metal.
  * The same for every badge, so a renderer makes it once and keeps it.
  */
@@ -2703,6 +2793,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_luster_ffi_checksum_func_lighting_preset() != 41119) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_luster_ffi_checksum_func_look() != 53074) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_luster_ffi_checksum_func_sandblast() != 43030) {

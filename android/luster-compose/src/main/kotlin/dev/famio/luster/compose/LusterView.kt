@@ -38,7 +38,8 @@ import kotlinx.coroutines.CancellationException
 /**
  * A badge struck from an SVG, lit in the studio, as a composable: the same
  * badge `dev.famio.luster.LusterView` draws, from the same stage, without a View.
- * Drag to turn it; it keeps spinning briefly with momentum.
+ * Drag to turn it; it keeps spinning briefly with momentum. Pinch to bring it
+ * closer and slide two fingers to look about it; a double tap puts it back.
  *
  * It is clear round the badge and drawn over whatever is behind it, so a
  * background is the layout's. The drag is the badge's, inside a scrolling
@@ -65,6 +66,8 @@ fun LusterView(
     appearance: LusterAppearance = LusterAppearance(),
     /** Whether a flick keeps the badge turning; never while the system has animations off. */
     momentumEnabled: Boolean = true,
+    /** Whether a pinch brings the badge closer. Turned off, the badge is put back at its size. */
+    zoomEnabled: Boolean = true,
     /**
      * Shown over the view, in the middle, while a source is set and no badge
      * is on screen: while the first is struck, given [LusterState.Minting],
@@ -90,6 +93,7 @@ fun LusterView(
             currentOnState?.invoke(it)
         }
         stage.momentumEnabled = momentumEnabled
+        stage.zoomEnabled = zoomEnabled
         // The options before the document, so a first mint is struck with them.
         stage.options = options
         stage.appearance = appearance
@@ -140,9 +144,13 @@ fun LusterView(
 /**
  * Turns the badge under one finger: from the moment it lands, so a touch
  * stops a turning badge, by what it moves in points, and with the velocity
- * it lifts at. Every change is consumed, so a parent does not scroll with it.
+ * it lifts at. A second finger makes it a pinch, which brings the badge
+ * closer and carries it about; the finger left behind does not turn it. A
+ * double tap puts it back. Every change is consumed, so a parent does not
+ * scroll with it.
  */
 private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.turn(stage: LusterStage) {
+    var lastTap: Pair<Offset, Long>? = null
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
         down.consume()
@@ -151,9 +159,36 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.turn(sta
         tracker.addPosition(down.uptimeMillis, down.position)
         var last: Offset = down.position
         var lifted = false
+        var liftedAt = down.uptimeMillis
+        // The fingers' spread as a pinch began, while one is going on.
+        var pinchSpread: Float? = null
+        var pinched = false
         try {
             while (true) {
-                val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                val event = awaitPointerEvent()
+                val pressed = event.changes.filter { it.pressed }
+                if (pinchSpread == null && !pinched && pressed.size >= 2 && stage.zoomEnabled) {
+                    // The drag gives way to the pinch, without a flick.
+                    pinched = true
+                    stage.dragEnded(null)
+                    pinchSpread = spread(pressed)
+                    val middle = middle(pressed)
+                    stage.pinchStarted(middle.x, middle.y)
+                }
+                if (pinched) {
+                    event.changes.forEach { it.consume() }
+                    val spread = pinchSpread
+                    if (spread != null && pressed.size >= 2) {
+                        val middle = middle(pressed)
+                        stage.pinched(spread(pressed) / spread, middle.x, middle.y)
+                    } else if (spread != null) {
+                        pinchSpread = null
+                        stage.pinchEnded()
+                    }
+                    if (pressed.isEmpty()) break
+                    continue
+                }
+                val change = event.changes.firstOrNull { it.id == down.id } ?: break
                 tracker.addPosition(change.uptimeMillis, change.position)
                 // The lift may come with the last of the movement: it counts too.
                 val delta = change.position - last
@@ -163,13 +198,39 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.turn(sta
                 if (delta != Offset.Zero) stage.dragged(delta.x / density, delta.y / density)
                 if (change.changedToUpIgnoreConsumed()) {
                     lifted = true
+                    liftedAt = change.uptimeMillis
                     break
                 }
             }
         } catch (cancelled: CancellationException) {
+            if (pinchSpread != null) stage.pinchEnded()
             stage.dragEnded(null)
             throw cancelled
         }
+        if (pinched) return@awaitEachGesture
         stage.dragEnded(if (lifted) tracker.calculateVelocity().x / density else null)
+        // A finger lifted where it came down, soon: a second one soon after
+        // puts the badge back.
+        val timeout = viewConfiguration.doubleTapTimeoutMillis
+        if (!lifted || liftedAt - down.uptimeMillis > timeout ||
+            (last - down.position).getDistance() > viewConfiguration.touchSlop
+        ) return@awaitEachGesture
+        val tap = lastTap
+        lastTap = if (tap != null && down.uptimeMillis - tap.second <= timeout &&
+            (down.position - tap.first).getDistance() <= viewConfiguration.touchSlop * 2
+        ) {
+            stage.putBack()
+            null
+        } else {
+            down.position to liftedAt
+        }
     }
 }
+
+/** The distance between the first two fingers down, pixels. */
+private fun spread(pressed: List<androidx.compose.ui.input.pointer.PointerInputChange>): Float =
+    maxOf(1f, (pressed[0].position - pressed[1].position).getDistance())
+
+/** The point halfway between the first two fingers down. */
+private fun middle(pressed: List<androidx.compose.ui.input.pointer.PointerInputChange>): Offset =
+    (pressed[0].position + pressed[1].position) / 2f

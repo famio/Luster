@@ -65,6 +65,23 @@ double fieldOfView({
 
 Handling handling() => RustLib.instance.api.crateApiLusterHandling();
 
+/// Brings the badge `zoom` times closer with the point of its frame at
+/// `point_x`, `point_y` seen at `at_x`, `at_y` in the view (fractions of it
+/// from its middle, y down), as near as the frame lets it.
+Look look({
+  required double zoom,
+  required double pointX,
+  required double pointY,
+  required double atX,
+  required double atY,
+}) => RustLib.instance.api.crateApiLusterLook(
+  zoom: zoom,
+  pointX: pointX,
+  pointY: pointY,
+  atX: atX,
+  atY: atY,
+);
+
 /// Carries a flick's spin (radians per second) over `dt` seconds.
 Coast coast({required double velocity, required double dt}) =>
     RustLib.instance.api.crateApiLusterCoast(velocity: velocity, dt: dt);
@@ -178,12 +195,16 @@ class Handling {
   final double restingTilt;
   final double restingSpin;
 
+  /// The closest a pinch brings the badge, times its size at rest.
+  final double closest;
+
   const Handling({
     required this.spinPerPoint,
     required this.tiltPerPoint,
     required this.tiltLimit,
     required this.restingTilt,
     required this.restingSpin,
+    required this.closest,
   });
 
   @override
@@ -192,7 +213,8 @@ class Handling {
       tiltPerPoint.hashCode ^
       tiltLimit.hashCode ^
       restingTilt.hashCode ^
-      restingSpin.hashCode;
+      restingSpin.hashCode ^
+      closest.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -203,7 +225,8 @@ class Handling {
           tiltPerPoint == other.tiltPerPoint &&
           tiltLimit == other.tiltLimit &&
           restingTilt == other.restingTilt &&
-          restingSpin == other.restingSpin;
+          restingSpin == other.restingSpin &&
+          closest == other.closest;
 }
 
 /// A lamp in the studio: which way it points, and what colour it is.
@@ -266,6 +289,29 @@ class LightingPreset {
           runtimeType == other.runtimeType &&
           environment == other.environment &&
           sceneLux == other.sceneLux;
+}
+
+/// What a view shows of the badge brought closer: `zoom` times its size at
+/// rest, centred on `x`, `y`, a point of the frame it fits at rest, in
+/// fractions of that frame from its middle, x to the right and y down.
+class Look {
+  final double zoom;
+  final double x;
+  final double y;
+
+  const Look({required this.zoom, required this.x, required this.y});
+
+  @override
+  int get hashCode => zoom.hashCode ^ x.hashCode ^ y.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Look &&
+          runtimeType == other.runtimeType &&
+          zoom == other.zoom &&
+          x == other.x &&
+          y == other.y;
 }
 
 class LusterBadge {

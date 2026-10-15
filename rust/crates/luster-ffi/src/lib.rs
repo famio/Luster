@@ -478,6 +478,8 @@ pub struct Handling {
     /// Where the badge sits before it is touched, radians.
     pub resting_tilt: f32,
     pub resting_spin: f32,
+    /// The closest a pinch brings the badge, times its size at rest.
+    pub closest: f32,
 }
 
 #[uniffi::export]
@@ -489,7 +491,27 @@ pub fn handling() -> Handling {
         tilt_limit: h.tilt_limit,
         resting_tilt: style::RESTING_POSE[0],
         resting_spin: style::RESTING_POSE[1],
+        closest: h.closest,
     }
+}
+
+/// What a view shows of the badge brought closer: `zoom` times its size at
+/// rest, centred on `x`, `y`, a point of the frame it fits at rest, in
+/// fractions of that frame from its middle, x to the right and y down.
+#[derive(uniffi::Record)]
+pub struct Look {
+    pub zoom: f32,
+    pub x: f32,
+    pub y: f32,
+}
+
+/// Brings the badge `zoom` times closer with the point of its frame at
+/// `point_x`, `point_y` seen at `at_x`, `at_y` in the view (fractions of it
+/// from its middle, y down), as near as the frame lets it.
+#[uniffi::export]
+pub fn look(zoom: f32, point_x: f32, point_y: f32, at_x: f32, at_y: f32) -> Look {
+    let l = style::look(zoom, [point_x, point_y], [at_x, at_y]);
+    Look { zoom: l.zoom, x: l.x, y: l.y }
 }
 
 /// How far a flick carries the badge over a frame, and the spin it is left with.

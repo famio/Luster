@@ -3,7 +3,8 @@ import RealityKit
 import SwiftUI
 
 /// A badge minted from an SVG, lit in the studio. Drag to turn it; it keeps
-/// spinning briefly with momentum.
+/// spinning briefly with momentum. Pinch to bring it closer and slide two
+/// fingers to look about it; a double tap puts it back.
 ///
 /// Minting runs off the main actor; while it runs the previous badge stays on
 /// screen. Changing `source` cancels a mint in flight. Changing `appearance`
@@ -25,6 +26,9 @@ public struct LusterView: View {
     /// Whether a flick keeps the badge turning. A flick never does while the
     /// system asks for reduced motion, whatever this says.
     public var momentumEnabled: Bool
+    /// Whether a pinch brings the badge closer. Turned off, the badge is put
+    /// back at its size.
+    public var zoomEnabled: Bool
     public var onStateChange: (@MainActor (LusterState) -> Void)?
     /// Erased, so that the view's type is the same with a placeholder or
     /// without, whatever the placeholder is.
@@ -40,12 +44,14 @@ public struct LusterView: View {
         source: LusterSource?, options: LusterOptions = .init(),
         appearance: LusterAppearance = .init(),
         momentumEnabled: Bool = true,
+        zoomEnabled: Bool = true,
         onStateChange: (@MainActor (LusterState) -> Void)? = nil
     ) {
         self.source = source
         self.options = options
         self.appearance = appearance
         self.momentumEnabled = momentumEnabled
+        self.zoomEnabled = zoomEnabled
         self.onStateChange = onStateChange
         placeholder = nil
     }
@@ -58,6 +64,7 @@ public struct LusterView: View {
         source: LusterSource?, options: LusterOptions = .init(),
         appearance: LusterAppearance = .init(),
         momentumEnabled: Bool = true,
+        zoomEnabled: Bool = true,
         onStateChange: (@MainActor (LusterState) -> Void)? = nil,
         @ViewBuilder placeholder: @escaping (LusterState) -> Placeholder
     ) {
@@ -65,6 +72,7 @@ public struct LusterView: View {
         self.options = options
         self.appearance = appearance
         self.momentumEnabled = momentumEnabled
+        self.zoomEnabled = zoomEnabled
         self.onStateChange = onStateChange
         self.placeholder = { AnyView(placeholder($0)) }
     }
@@ -84,16 +92,18 @@ public struct LusterView: View {
                 MainActor.assumeIsolated { stage.step(event.deltaTime) }
             }
         }
-        .onGeometryChange(for: Float.self) { geometry in
-            Float(geometry.size.width / max(geometry.size.height, 1))
-        } action: { aspect in
-            stage.aspectRatio = aspect
+        .onGeometryChange(for: CGSize.self) { geometry in
+            geometry.size
+        } action: { size in
+            stage.size = size
         }
         .gesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { stage.dragChanged($0.translation) }
                 .onEnded { stage.dragEnded(velocity: $0.velocity) }
         )
+        .pinchable(stage)
+        .simultaneousGesture(TapGesture(count: 2).onEnded { stage.putBack() })
         .task(id: Pair(source, options)) {
             await stage.load(source, options: options, appearance: appearance)
         }
@@ -102,6 +112,9 @@ public struct LusterView: View {
         }
         .onChange(of: !reduceMotion && momentumEnabled, initial: true) { _, momentum in
             stage.momentumEnabled = momentum
+        }
+        .onChange(of: zoomEnabled, initial: true) { _, zoom in
+            stage.zoomEnabled = zoom
         }
         .onChange(of: stage.change) {
             onStateChange?(stage.state)

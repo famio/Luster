@@ -67,7 +67,9 @@ LusterView(
 ```
 
 Drag to turn the badge; it keeps going with momentum, unless the system asks for
-reduced motion or `momentumEnabled` is false. The widget paints nothing behind
+reduced motion or `momentumEnabled` is false. Pinch to bring it up to five times
+closer and slide two fingers, or a trackpad's, to look about it; a double tap puts
+it back, and `zoomEnabled` set to false leaves it at its size. The widget paints nothing behind
 the badge: put it in a `ColoredBox`, or in a `Stack` over anything, for a
 background.
 

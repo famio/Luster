@@ -144,6 +144,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Submesh> dco_decode_list_submesh(dynamic raw);
 
   @protected
+  Look dco_decode_look(dynamic raw);
+
+  @protected
   LusterBadge dco_decode_luster_badge(dynamic raw);
 
   @protected
@@ -306,6 +309,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<Submesh> sse_decode_list_submesh(SseDeserializer deserializer);
+
+  @protected
+  Look sse_decode_look(SseDeserializer deserializer);
 
   @protected
   LusterBadge sse_decode_luster_badge(SseDeserializer deserializer);
@@ -493,6 +499,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_submesh(List<Submesh> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_look(Look self, SseSerializer serializer);
 
   @protected
   void sse_encode_luster_badge(LusterBadge self, SseSerializer serializer);

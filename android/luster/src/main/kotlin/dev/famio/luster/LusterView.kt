@@ -8,8 +8,11 @@ import android.view.MotionEvent
 import android.view.TextureView
 import android.view.VelocityTracker
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.animation.DecelerateInterpolator
 import com.google.android.filament.android.UiHelper
+import kotlin.math.hypot
+import kotlin.math.max
 import kotlin.math.pow
 
 /** What the view is doing. */
@@ -22,7 +25,8 @@ sealed interface LusterState {
 
 /**
  * A badge struck from an SVG, lit in the studio. Drag to turn it; it keeps
- * spinning briefly with momentum.
+ * spinning briefly with momentum. Pinch to bring it closer and slide two
+ * fingers to look about it; a double tap puts it back.
  *
  * The view is clear round the badge: it draws the badge over whatever is
  * behind it, so a background is the layout's, under the view. It is a
@@ -76,6 +80,11 @@ class LusterView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         get() = stage.momentumEnabled
         set(value) { stage.momentumEnabled = value }
 
+    /** Whether a pinch brings the badge closer. Turned off, the badge is put back at its size. */
+    var zoomEnabled: Boolean
+        get() = stage.zoomEnabled
+        set(value) { stage.zoomEnabled = value }
+
     /**
      * Shown while a source is set and no badge is on screen: while the first
      * is struck, and if it fails. Like a list's empty view, it is yours to lay
@@ -96,6 +105,15 @@ class LusterView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private val choreographer = Choreographer.getInstance()
     private var lastTouch = 0f to 0f
     private var tracker: VelocityTracker? = null
+    private val touchConfig = ViewConfiguration.get(context)
+    /** Where the finger came down, and when. */
+    private var touchDown = Triple(0f, 0f, 0L)
+    /** The last tap, for a second one to make a double tap. */
+    private var lastTap: Triple<Float, Float, Long>? = null
+    /** The fingers' spread as a pinch began, while one is going on. */
+    private var pinchSpread: Float? = null
+    /** A pinch was made since the fingers came down: the one left behind does not turn the badge. */
+    private var pinched = false
 
     init {
         uiHelper.isOpaque = false
@@ -147,10 +165,34 @@ class LusterView @JvmOverloads constructor(context: Context, attrs: AttributeSet
                 parent?.requestDisallowInterceptTouchEvent(true)
                 stage.dragStarted()
                 lastTouch = event.x to event.y
+                touchDown = Triple(event.x, event.y, event.eventTime)
+                pinched = false
                 tracker?.recycle()
                 tracker = VelocityTracker.obtain().apply { addMovement(event) }
             }
+            MotionEvent.ACTION_POINTER_DOWN -> {
+                if (event.pointerCount == 2 && zoomEnabled && pinchSpread == null) {
+                    // The drag gives way to the pinch, without a flick.
+                    pinched = true
+                    stage.dragEnded(null)
+                    pinchSpread = spread(event)
+                    stage.pinchStarted(middle(event).first, middle(event).second)
+                }
+            }
+            MotionEvent.ACTION_POINTER_UP -> {
+                if (pinchSpread != null && event.pointerCount <= 2) {
+                    pinchSpread = null
+                    stage.pinchEnded()
+                }
+            }
             MotionEvent.ACTION_MOVE -> {
+                val spread = pinchSpread
+                if (spread != null) {
+                    val (x, y) = middle(event)
+                    stage.pinched(spread(event) / spread, x, y)
+                    return true
+                }
+                if (pinched) return true
                 tracker?.addMovement(event)
                 val dx = event.x - lastTouch.first
                 val dy = event.y - lastTouch.second
@@ -158,7 +200,16 @@ class LusterView @JvmOverloads constructor(context: Context, attrs: AttributeSet
                 stage.dragged(dx * pointScale(), dy * pointScale())
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                if (pinched) {
+                    pinchSpread = null
+                    pinched = false
+                    stage.pinchEnded()
+                    tracker?.recycle()
+                    tracker = null
+                    return true
+                }
                 if (event.actionMasked == MotionEvent.ACTION_UP) {
+                    tapped(event)
                     // The lift may come with the last of the movement: it counts too.
                     val dx = event.x - lastTouch.first
                     val dy = event.y - lastTouch.second
@@ -180,6 +231,29 @@ class LusterView @JvmOverloads constructor(context: Context, attrs: AttributeSet
             }
         }
         return true
+    }
+
+    /** The distance between the first two fingers, pixels. */
+    private fun spread(event: MotionEvent) =
+        max(1f, hypot(event.getX(0) - event.getX(1), event.getY(0) - event.getY(1)))
+
+    /** The point halfway between the first two fingers. */
+    private fun middle(event: MotionEvent) =
+        (event.getX(0) + event.getX(1)) / 2 to (event.getY(0) + event.getY(1)) / 2
+
+    /** A finger lifted where it came down, soon: a second one soon after puts the badge back. */
+    private fun tapped(event: MotionEvent) {
+        val (x, y, time) = touchDown
+        val slop = touchConfig.scaledDoubleTapSlop.toFloat()
+        val timeout = ViewConfiguration.getDoubleTapTimeout()
+        if (event.eventTime - time > timeout || hypot(event.x - x, event.y - y) > touchConfig.scaledTouchSlop) return
+        val last = lastTap
+        if (last != null && time - last.third <= timeout && hypot(x - last.first, y - last.second) <= slop) {
+            lastTap = null
+            stage.putBack()
+        } else {
+            lastTap = Triple(x, y, event.eventTime)
+        }
     }
 
     /** Apple measures a drag in points; this turns Android's pixels into them. */

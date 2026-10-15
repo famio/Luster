@@ -11,7 +11,7 @@ import UIKit.UIGestureRecognizerSubclass
 /// goes wherever a view can.
 ///
 /// It draws the same scene as `LusterView`, from the same stage: the same
-/// minting, pose, drag and momentum.
+/// minting, pose, drag, momentum and pinch.
 public final class LusterUIView: UIView {
     public var source: LusterSource? {
         didSet {
@@ -33,6 +33,11 @@ public final class LusterUIView: UIView {
     /// system asks for reduced motion, whatever this says.
     public var momentumEnabled = true {
         didSet { reduceMotionChanged() }
+    }
+    /// Whether a pinch brings the badge closer. Turned off, the badge is put
+    /// back at its size.
+    public var zoomEnabled = true {
+        didSet { stage.zoomEnabled = zoomEnabled }
     }
     public var onStateChange: (@MainActor (LusterState) -> Void)?
     /// Shown over the view while a source is set and no badge is on screen:
@@ -73,6 +78,8 @@ public final class LusterUIView: UIView {
         frame: .zero, cameraMode: .nonAR,
         automaticallyConfigureSession: false)
     private var updates: (any Cancellable)?
+    /// Lets the pinch and the double tap run with the drag.
+    private let alongside = Alongside()
     private var loading: Task<Void, Never>?
     private var applying: Task<Void, Never>?
 
@@ -110,6 +117,13 @@ public final class LusterUIView: UIView {
         }
 
         addGestureRecognizer(DragGestureRecognizer(target: self, action: #selector(drag)))
+        let pinch = UIPinchGestureRecognizer(target: self, action: #selector(pinch))
+        pinch.delegate = alongside
+        addGestureRecognizer(pinch)
+        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(putBack))
+        doubleTap.numberOfTapsRequired = 2
+        doubleTap.delegate = alongside
+        addGestureRecognizer(doubleTap)
         isAccessibilityElement = true
         accessibilityLabel = String(localized: "Badge")
         NotificationCenter.default.addObserver(
@@ -130,7 +144,7 @@ public final class LusterUIView: UIView {
 
     public override func layoutSubviews() {
         super.layoutSubviews()
-        stage.aspectRatio = Float(bounds.width / max(bounds.height, 1))
+        stage.size = bounds.size
     }
 
     private func reload() {
@@ -217,10 +231,11 @@ public final class LusterUIView: UIView {
     /// While the placeholder is up there is no badge to turn, and a touch is
     /// left to the placeholder, so that a button in it can be pressed.
     public override func gestureRecognizerShouldBegin(_ gesture: UIGestureRecognizer) -> Bool {
-        guard gesture is DragGestureRecognizer else {
-            return super.gestureRecognizerShouldBegin(gesture)
+        switch gesture {
+        case is DragGestureRecognizer: !placeholderUp
+        case is UIPinchGestureRecognizer: zoomEnabled && !placeholderUp
+        default: super.gestureRecognizerShouldBegin(gesture)
         }
-        return !placeholderUp
     }
 
     @objc private func drag(_ gesture: DragGestureRecognizer) {
@@ -232,6 +247,24 @@ public final class LusterUIView: UIView {
         default:
             break
         }
+    }
+
+    @objc private func pinch(_ gesture: UIPinchGestureRecognizer) {
+        let at = gesture.location(in: self)
+        switch gesture.state {
+        case .began:
+            stage.pinchBegan(at: at)
+            stage.pinchChanged(scale: gesture.scale, at: at)
+        case .changed:
+            // A finger lifted leaves one: the pinch is over, not moved.
+            if gesture.numberOfTouches >= 2 { stage.pinchChanged(scale: gesture.scale, at: at) }
+        default:
+            stage.pinchEnded()
+        }
+    }
+
+    @objc private func putBack() {
+        stage.putBack()
     }
 
     @objc private func reduceMotionChanged() {

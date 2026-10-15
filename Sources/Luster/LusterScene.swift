@@ -77,12 +77,36 @@ public final class LusterScene {
         didSet { frame() }
     }
 
+    /// How much closer the view has brought the badge, and where it looks.
+    package var look = LusterLook.atRest {
+        didSet { if look != oldValue { frame() } }
+    }
+
     private func frame() {
-        camera.camera.fieldOfViewOrientation = .vertical
-        camera.camera.fieldOfViewInDegrees = LusterCore.fieldOfView(
+        let fits = LusterCore.fieldOfView(
             width: size.x, height: size.y,
             aspect: aspectRatio)
+        let half = tan(fits * .pi / 360)
+        camera.camera.fieldOfViewOrientation = .vertical
+        camera.camera.fieldOfViewInDegrees = atan(half / look.zoom) * 360 / .pi
+        // A point off the middle is looked at by turning the camera where it
+        // stands, as the other platforms shift their lens: what each point of
+        // the badge reflects depends on where the camera is, so the light
+        // and its reflections stay as they are.
+        let across = 2 * look.x * half * aspectRatio
+        let up = -2 * look.y * half
+        let turn =
+            simd_quatf(angle: -atan(across), axis: [0, 1, 0])
+            * simd_quatf(angle: atan2(up, (1 + across * across).squareRoot()), axis: [1, 0, 0])
+        camera.orientation = turn
+        // The headlight rides on the camera, and keeps pointing as it did.
+        if let headlight = lights[.headlight] {
+            headlight.orientation = turn.inverse * headlightOrientation
+        }
     }
+
+    /// The headlight's own turn, before the camera's.
+    private var headlightOrientation = simd_quatf(ix: 0, iy: 0, iz: 0, r: 1)
 
     public static func make(_ badge: LusterBadge, appearance: LusterAppearance) async throws
         -> LusterScene
@@ -157,6 +181,7 @@ public final class LusterScene {
             entity.light.color = PlatformColor(light.color)
             entity.orientation = Self.orientation(SIMD2(light.pitch, light.yaw))
             if light.role == .headlight {
+                headlightOrientation = entity.orientation
                 camera.addChild(entity)
             } else {
                 root.addChild(entity)

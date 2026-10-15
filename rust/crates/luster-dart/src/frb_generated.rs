@@ -40,7 +40,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 116726236;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -893883561;
 
 // Section: executor
 
@@ -483,6 +483,46 @@ fn wire__crate__api__luster__lighting_preset_impl(
         },
     )
 }
+fn wire__crate__api__luster__look_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "look",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_zoom = <f32>::sse_decode(&mut deserializer);
+            let api_point_x = <f32>::sse_decode(&mut deserializer);
+            let api_point_y = <f32>::sse_decode(&mut deserializer);
+            let api_at_x = <f32>::sse_decode(&mut deserializer);
+            let api_at_y = <f32>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Ok::<_, ()>(crate::api::luster::look(
+                    api_zoom,
+                    api_point_x,
+                    api_point_y,
+                    api_at_x,
+                    api_at_y,
+                ))?;
+                std::result::Result::Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__luster__realitykit_tone_cube_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -854,12 +894,14 @@ impl SseDecode for crate::api::luster::Handling {
         let mut var_tiltLimit = <f32>::sse_decode(deserializer);
         let mut var_restingTilt = <f32>::sse_decode(deserializer);
         let mut var_restingSpin = <f32>::sse_decode(deserializer);
+        let mut var_closest = <f32>::sse_decode(deserializer);
         return crate::api::luster::Handling {
             spin_per_point: var_spinPerPoint,
             tilt_per_point: var_tiltPerPoint,
             tilt_limit: var_tiltLimit,
             resting_tilt: var_restingTilt,
             resting_spin: var_restingSpin,
+            closest: var_closest,
         };
     }
 }
@@ -1016,6 +1058,20 @@ impl SseDecode for Vec<crate::api::luster::Submesh> {
             ans_.push(<crate::api::luster::Submesh>::sse_decode(deserializer));
         }
         return ans_;
+    }
+}
+
+impl SseDecode for crate::api::luster::Look {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_zoom = <f32>::sse_decode(deserializer);
+        let mut var_x = <f32>::sse_decode(deserializer);
+        let mut var_y = <f32>::sse_decode(deserializer);
+        return crate::api::luster::Look {
+            zoom: var_zoom,
+            x: var_x,
+            y: var_y,
+        };
     }
 }
 
@@ -1237,11 +1293,11 @@ fn pde_ffi_dispatcher_primary_impl(
     match func_id {
         1 => wire__crate__api__luster__MintRequest_badge_impl(port, ptr, rust_vec_len, data_len),
         4 => wire__crate__api__luster__Struck_glb_impl(port, ptr, rust_vec_len, data_len),
-        13 => {
+        14 => {
             wire__crate__api__luster__realitykit_tone_cube_impl(port, ptr, rust_vec_len, data_len)
         }
-        14 => wire__crate__api__luster__sandblast_impl(port, ptr, rust_vec_len, data_len),
-        16 => {
+        15 => wire__crate__api__luster__sandblast_impl(port, ptr, rust_vec_len, data_len),
+        17 => {
             wire__crate__api__luster__showcase_environment_impl(port, ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -1266,11 +1322,12 @@ fn pde_ffi_dispatcher_sync_impl(
         10 => wire__crate__api__luster__handling_impl(ptr, rust_vec_len, data_len),
         11 => wire__crate__api__luster__lamp_impl(ptr, rust_vec_len, data_len),
         12 => wire__crate__api__luster__lighting_preset_impl(ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__luster__scene_calibration_impl(ptr, rust_vec_len, data_len),
-        17 => wire__crate__api__luster__silver_impl(ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__luster__studio_camera_impl(ptr, rust_vec_len, data_len),
-        19 => wire__crate__api__luster__studio_lights_impl(ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__luster__version_impl(ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__luster__look_impl(ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__luster__scene_calibration_impl(ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__luster__silver_impl(ptr, rust_vec_len, data_len),
+        19 => wire__crate__api__luster__studio_camera_impl(ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__luster__studio_lights_impl(ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__luster__version_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1366,6 +1423,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::luster::Handling {
             self.tilt_limit.into_into_dart().into_dart(),
             self.resting_tilt.into_into_dart().into_dart(),
             self.resting_spin.into_into_dart().into_dart(),
+            self.closest.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -1451,6 +1509,23 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::luster::LightingPreset>
     for crate::api::luster::LightingPreset
 {
     fn into_into_dart(self) -> crate::api::luster::LightingPreset {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::luster::Look {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.zoom.into_into_dart().into_dart(),
+            self.x.into_into_dart().into_dart(),
+            self.y.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::luster::Look {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::luster::Look> for crate::api::luster::Look {
+    fn into_into_dart(self) -> crate::api::luster::Look {
         self
     }
 }
@@ -1785,6 +1860,7 @@ impl SseEncode for crate::api::luster::Handling {
         <f32>::sse_encode(self.tilt_limit, serializer);
         <f32>::sse_encode(self.resting_tilt, serializer);
         <f32>::sse_encode(self.resting_spin, serializer);
+        <f32>::sse_encode(self.closest, serializer);
     }
 }
 
@@ -1923,6 +1999,15 @@ impl SseEncode for Vec<crate::api::luster::Submesh> {
         for item in self {
             <crate::api::luster::Submesh>::sse_encode(item, serializer);
         }
+    }
+}
+
+impl SseEncode for crate::api::luster::Look {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <f32>::sse_encode(self.zoom, serializer);
+        <f32>::sse_encode(self.x, serializer);
+        <f32>::sse_encode(self.y, serializer);
     }
 }
 

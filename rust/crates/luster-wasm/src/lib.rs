@@ -623,6 +623,9 @@ pub struct Handling {
     pub resting_tilt: f32,
     #[wasm_bindgen(readonly, js_name = restingSpin)]
     pub resting_spin: f32,
+    /// The closest a pinch brings the badge, times its size at rest.
+    #[wasm_bindgen(readonly)]
+    pub closest: f32,
 }
 
 #[wasm_bindgen]
@@ -634,7 +637,30 @@ pub fn handling() -> Handling {
         tilt_limit: h.tilt_limit,
         resting_tilt: style::RESTING_POSE[0],
         resting_spin: style::RESTING_POSE[1],
+        closest: h.closest,
     }
+}
+
+/// What a view shows of the badge brought closer: `zoom` times its size at
+/// rest, centred on `x`, `y`, a point of the frame it fits at rest, in
+/// fractions of that frame from its middle, x to the right and y down.
+#[wasm_bindgen]
+pub struct Look {
+    #[wasm_bindgen(readonly)]
+    pub zoom: f32,
+    #[wasm_bindgen(readonly)]
+    pub x: f32,
+    #[wasm_bindgen(readonly)]
+    pub y: f32,
+}
+
+/// Brings the badge `zoom` times closer with the point of its frame at
+/// `point_x`, `point_y` seen at `at_x`, `at_y` in the view (fractions of it
+/// from its middle, y down), as near as the frame lets it.
+#[wasm_bindgen]
+pub fn look(zoom: f32, point_x: f32, point_y: f32, at_x: f32, at_y: f32) -> Look {
+    let l = style::look(zoom, [point_x, point_y], [at_x, at_y]);
+    Look { zoom: l.zoom, x: l.x, y: l.y }
 }
 
 /// How far a flick carries the badge over a frame, and the spin it is left with.

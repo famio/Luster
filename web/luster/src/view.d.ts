@@ -13,7 +13,8 @@ export interface LusterStateChange {
 /**
  * `<luster-view>`: a badge minted from an SVG, lit in the studio, drawn by
  * three.js. Drag to turn it; it keeps spinning briefly with momentum, unless
- * the system asks for reduced motion.
+ * the system asks for reduced motion. Pinch to bring it closer and slide two
+ * fingers to look about it; a double tap puts it back.
  *
  * Its children are a placeholder, shown in the middle while a source is set
  * and no badge is on screen; the element's `state` attribute says why. A
@@ -40,6 +41,9 @@ export class LusterView extends HTMLElement {
   /** Whether a flick keeps the badge turning; never while the system asks
    *  for reduced motion. */
   momentum: boolean;
+  /** Whether a pinch brings the badge closer. Off, the badge is put back at
+   *  its size and a pinch is the page's. */
+  zoomable: boolean;
   readonly state: LusterViewState;
   /** The badge on screen once `ready`. */
   readonly badge: LusterBadge | null;

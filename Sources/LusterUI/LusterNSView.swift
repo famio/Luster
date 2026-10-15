@@ -12,6 +12,9 @@ public final class LusterNSView: NSView {
     /// Whether a flick keeps the badge turning. A flick never does while the
     /// system asks for reduced motion, whatever this says.
     public var momentumEnabled = true { didSet { refresh() } }
+    /// Whether a pinch brings the badge closer. Turned off, the badge is put
+    /// back at its size.
+    public var zoomEnabled = true { didSet { refresh() } }
     public var onStateChange: (@MainActor (LusterState) -> Void)? { didSet { refresh() } }
     /// Shown over the view while a source is set and no badge is on screen:
     /// while the first is struck, and if it fails. It sits in the middle at
@@ -64,7 +67,7 @@ public final class LusterNSView: NSView {
         var view = LusterView(
             source: source, options: options,
             appearance: badgeAppearance, momentumEnabled: momentumEnabled,
-            onStateChange: onStateChange)
+            zoomEnabled: zoomEnabled, onStateChange: onStateChange)
         view.onPlaceholderChange = { [weak self] due in
             guard let self else { return }
             placeholderDue = due

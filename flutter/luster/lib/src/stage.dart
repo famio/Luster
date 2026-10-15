@@ -340,14 +340,16 @@ class BadgeStage {
 
   /// The studio's camera, wide enough to hold the badge in a view [aspect]
   /// wide over tall: the engine's framing, the one every platform uses.
-  Camera camera(double aspect) {
+  /// [look] brings it closer to a part of that frame.
+  Camera camera(double aspect, [rust.Look? look]) {
     final setup = rust.studioCamera();
     final fov = rust.fieldOfView(width: wide, height: tall, aspect: aspect);
-    return PerspectiveCamera(
+    return _StudioCamera(
       fovRadiansY: fov * math.pi / 180,
       // In front of the face, which looks down -z here.
       position: vm.Vector3(0, 0, -setup.distance),
       target: vm.Vector3.zero(),
+      look: look,
     );
   }
 
@@ -404,5 +406,48 @@ class _BadgeShader {
     } catch (_) {
       return null;
     }
+  }
+}
+
+/// The studio's camera, brought closer to a part of its frame from where it
+/// stands: the light and its reflections stay as they are.
+class _StudioCamera extends PerspectiveCamera {
+  _StudioCamera({
+    required super.fovRadiansY,
+    required super.position,
+    required super.target,
+    this.look,
+  });
+
+  final rust.Look? look;
+
+  @override
+  CameraProjection get projection {
+    final look = this.look;
+    final lens = super.projection;
+    return look == null || (look.zoom == 1 && look.x == 0 && look.y == 0)
+        ? lens
+        : _Closer(lens, look);
+  }
+}
+
+/// [lens]'s picture [look] times larger, moved so that the point of it [look]
+/// names is in the middle.
+class _Closer extends CameraProjection {
+  _Closer(this.lens, this.look);
+
+  final CameraProjection lens;
+  final rust.Look look;
+
+  @override
+  vm.Matrix4 getProjectionMatrix(double aspectRatio, {vm.Vector2? jitter}) {
+    final m = lens.getProjectionMatrix(aspectRatio);
+    final zoom = look.zoom;
+    m.setEntry(0, 0, m.entry(0, 0) * zoom);
+    m.setEntry(1, 1, m.entry(1, 1) * zoom);
+    // Moved in the clip's own units, with the jitter after, unscaled.
+    m.setEntry(0, 2, m.entry(0, 2) - 2 * zoom * look.x + (jitter?.x ?? 0));
+    m.setEntry(1, 2, m.entry(1, 2) + 2 * zoom * look.y + (jitter?.y ?? 0));
+    return m;
   }
 }

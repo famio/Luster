@@ -79,7 +79,9 @@ LusterView(source: LusterSource.url(Uri.parse('https://example.com/badge.svg')))
 ```
 
 Drag to turn the badge; a flick keeps it turning, unless the system asks for reduced
-motion or `momentumEnabled` is false. Minting runs off the UI thread, and the previous
+motion or `momentumEnabled` is false. Pinch to bring it up to five times closer and
+slide two fingers to look about it; a double tap puts it back, and `zoomEnabled` set to
+false leaves it at its size. Minting runs off the UI thread, and the previous
 badge stays on screen while a new one is struck.
 
 The view draws nothing behind the badge, so the background is yours: a colour, a

@@ -12,6 +12,8 @@ import 'stage.dart';
 
 /// A badge minted from an SVG, lit in the studio. Drag to turn it; it keeps
 /// spinning briefly with momentum, unless the system asks for reduced motion.
+/// Pinch to bring it closer and slide two fingers to look about it; a double
+/// tap puts it back.
 ///
 /// The engine runs on its own threads, so minting never blocks the UI
 /// isolate. A different [source] gives up a mint in flight; an equal one does
@@ -35,6 +37,7 @@ class LusterView extends StatefulWidget {
     this.options = const LusterOptions(),
     this.appearance = const LusterAppearance(),
     this.momentumEnabled = true,
+    this.zoomEnabled = true,
     this.onStateChange,
     this.placeholder,
   });
@@ -46,6 +49,10 @@ class LusterView extends StatefulWidget {
   /// Whether a flick keeps the badge turning; never while the system asks
   /// for reduced motion.
   final bool momentumEnabled;
+
+  /// Whether a pinch brings the badge closer. Turned off, the badge is put
+  /// back at its size.
+  final bool zoomEnabled;
 
   /// Told of every change: minting, ready with a badge, or failed.
   final ValueChanged<LusterState>? onStateChange;
@@ -93,6 +100,20 @@ class _LusterViewState extends State<LusterView> with SingleTickerProviderStateM
   double velocity = 0;
   bool dragging = false;
 
+  static const rust.Look atRest = rust.Look(zoom: 1, x: 0, y: 0);
+
+  /// How close a pinch has brought the badge, and where it looks. Kept
+  /// across badges, as the pose is.
+  rust.Look look = atRest;
+
+  /// The zoom and the point of the badge between the fingers as a pinch
+  /// began, while one is going on.
+  (double, double, double)? pinch;
+
+  /// A pinch was made since the fingers came down: the one left behind does
+  /// not turn the badge.
+  bool pinched = false;
+
   @override
   void initState() {
     super.initState();
@@ -135,6 +156,10 @@ class _LusterViewState extends State<LusterView> with SingleTickerProviderStateM
     // must not be told while it is still building.
     if (old.source != widget.source || old.options != widget.options) {
       Future.microtask(() => _load(widget.source));
+    }
+    if (old.zoomEnabled && !widget.zoomEnabled) {
+      pinch = null;
+      look = atRest;
     }
     if (old.appearance != widget.appearance && started) {
       stage.plate(widget.appearance);
@@ -295,6 +320,39 @@ class _LusterViewState extends State<LusterView> with SingleTickerProviderStateM
   // MARK: Turning it
 
   void _pose() => stage.pose(tilt, spin);
+
+  // MARK: Bringing it closer
+
+  /// A point in the view, in fractions of it from its middle.
+  (double, double) _fraction(Offset local) => (
+    local.dx / math.max(_viewSize.width, 1) - 0.5,
+    local.dy / math.max(_viewSize.height, 1) - 0.5,
+  );
+
+  /// Two fingers or a trackpad, their middle at [local]: the drag gives way
+  /// to them without a flick.
+  void _pinchStarted(Offset local) {
+    final (atX, atY) = _fraction(local);
+    pinched = true;
+    pinch = (look.zoom, look.x + atX / look.zoom, look.y + atY / look.zoom);
+    setState(() {
+      dragging = false;
+      velocity = 0;
+    });
+  }
+
+  /// The pinch is [scale] times its spread as it began, its middle at
+  /// [local]: the point of the badge that was there stays there.
+  void _pinched(double scale, Offset local) {
+    final (zoom, pointX, pointY) = pinch!;
+    final (atX, atY) = _fraction(local);
+    _see(rust.look(zoom: zoom * scale, pointX: pointX, pointY: pointY, atX: atX, atY: atY));
+  }
+
+  void _see(rust.Look look) {
+    if (look == this.look) return;
+    setState(() => this.look = look);
+  }
 
   /// Draws the badge every frame while it turns. One ticker, started and
   /// stopped: SceneView's `autoTick` makes a new one each time it is turned
@@ -471,32 +529,48 @@ class _LusterViewState extends State<LusterView> with SingleTickerProviderStateM
         ? AntiAliasingMode.fxaa
         : AntiAliasingMode.auto;
     if (!ready) return _withPlaceholder(context, const SizedBox.expand());
+    // One finger turns the badge; two, or a trackpad, pinch and slide it.
+    // A finger added or lifted ends the gesture and starts another.
     final view = GestureDetector(
-      onPanStart: (_) {
+      onScaleStart: (d) {
+        if (widget.zoomEnabled &&
+            (d.pointerCount >= 2 || d.kind == ui.PointerDeviceKind.trackpad)) {
+          _pinchStarted(d.localFocalPoint);
+          return;
+        }
+        if (pinched) return;
         setState(() {
           dragging = true;
           velocity = 0;
         });
         _turnOn();
       },
-      onPanUpdate: (d) {
-        spin += d.delta.dx * handling.spinPerPoint;
-        tilt = (tilt + d.delta.dy * handling.tiltPerPoint).clamp(
+      onScaleUpdate: (d) {
+        if (pinch != null) {
+          if (d.pointerCount >= 2 || d.pointerCount == 0) _pinched(d.scale, d.localFocalPoint);
+          return;
+        }
+        if (!dragging) return;
+        spin += d.focalPointDelta.dx * handling.spinPerPoint;
+        tilt = (tilt + d.focalPointDelta.dy * handling.tiltPerPoint).clamp(
           -handling.tiltLimit,
           handling.tiltLimit,
         );
         _pose();
       },
-      onPanCancel: () => setState(() => dragging = false),
-      onPanEnd: (d) => setState(() {
+      onScaleEnd: (d) => setState(() {
+        pinch = null;
+        // Fingers still down: one was added or lifted, and there is no
+        // flick.
+        if (d.pointerCount == 0) pinched = false;
+        final flick = dragging && d.pointerCount == 0 && !still && widget.momentumEnabled;
         dragging = false;
-        velocity = still || !widget.momentumEnabled
-            ? 0
-            : d.velocity.pixelsPerSecond.dx * handling.spinPerPoint;
+        velocity = flick ? d.velocity.pixelsPerSecond.dx * handling.spinPerPoint : 0;
       }),
+      onDoubleTap: () => _see(atRest),
       child: LayoutBuilder(
         builder: (context, box) {
-          final camera = stage.camera(box.maxWidth / math.max(box.maxHeight, 1));
+          final camera = stage.camera(box.maxWidth / math.max(box.maxHeight, 1), look);
           _viewSize = box.biggest;
           _camera = camera;
           return ValueListenableBuilder<int>(

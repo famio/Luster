@@ -704,6 +704,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_luster_ffi_checksum_func_lighting_preset(
     ): Int
+    external fun uniffi_luster_ffi_checksum_func_look(
+    ): Int
     external fun uniffi_luster_ffi_checksum_func_sandblast(
     ): Int
     external fun uniffi_luster_ffi_checksum_func_showcase_cubemap(
@@ -801,6 +803,8 @@ internal object UniffiLib {
     external fun uniffi_luster_ffi_fn_func_light_direction(`pitch`: Float,`yaw`: Float,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_luster_ffi_fn_func_lighting_preset(`lighting`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_luster_ffi_fn_func_look(`zoom`: Float,`pointX`: Float,`pointY`: Float,`atX`: Float,`atY`: Float,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_luster_ffi_fn_func_sandblast(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -970,6 +974,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_luster_ffi_checksum_func_lighting_preset() and 0xFFFF) != 41119) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_luster_ffi_checksum_func_look() and 0xFFFF) != 53074) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_luster_ffi_checksum_func_sandblast() and 0xFFFF) != 43030) {
@@ -2279,6 +2286,11 @@ internal data class Handling (
     var `restingTilt`: kotlin.Float
     , 
     var `restingSpin`: kotlin.Float
+    , 
+    /**
+     * The closest a pinch brings the badge, times its size at rest.
+     */
+    var `closest`: kotlin.Float
     
 ){
     
@@ -2300,6 +2312,7 @@ internal object FfiConverterTypeHandling: FfiConverterRustBuffer<Handling> {
             FfiConverterFloat.read(buf),
             FfiConverterFloat.read(buf),
             FfiConverterFloat.read(buf),
+            FfiConverterFloat.read(buf),
         )
     }
 
@@ -2308,7 +2321,8 @@ internal object FfiConverterTypeHandling: FfiConverterRustBuffer<Handling> {
             FfiConverterFloat.allocationSize(value.`tiltPerPoint`) +
             FfiConverterFloat.allocationSize(value.`tiltLimit`) +
             FfiConverterFloat.allocationSize(value.`restingTilt`) +
-            FfiConverterFloat.allocationSize(value.`restingSpin`)
+            FfiConverterFloat.allocationSize(value.`restingSpin`) +
+            FfiConverterFloat.allocationSize(value.`closest`)
     )
 
     override fun write(value: Handling, buf: ByteBuffer) {
@@ -2317,6 +2331,7 @@ internal object FfiConverterTypeHandling: FfiConverterRustBuffer<Handling> {
             FfiConverterFloat.write(value.`tiltLimit`, buf)
             FfiConverterFloat.write(value.`restingTilt`, buf)
             FfiConverterFloat.write(value.`restingSpin`, buf)
+            FfiConverterFloat.write(value.`closest`, buf)
     }
 }
 
@@ -2438,6 +2453,54 @@ internal object FfiConverterTypeLightingPreset: FfiConverterRustBuffer<LightingP
             FfiConverterFloat.write(value.`iblExponent`, buf)
             FfiConverterFloat.write(value.`filamentLux`, buf)
             FfiConverterFloat.write(value.`filamentEnvironmentLux`, buf)
+    }
+}
+
+
+
+/**
+ * What a view shows of the badge brought closer: `zoom` times its size at
+ * rest, centred on `x`, `y`, a point of the frame it fits at rest, in
+ * fractions of that frame from its middle, x to the right and y down.
+ */
+internal data class Look (
+    var `zoom`: kotlin.Float
+    , 
+    var `x`: kotlin.Float
+    , 
+    var `y`: kotlin.Float
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+internal object FfiConverterTypeLook: FfiConverterRustBuffer<Look> {
+    override fun read(buf: ByteBuffer): Look {
+        return Look(
+            FfiConverterFloat.read(buf),
+            FfiConverterFloat.read(buf),
+            FfiConverterFloat.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: Look) = (
+            FfiConverterFloat.allocationSize(value.`zoom`) +
+            FfiConverterFloat.allocationSize(value.`x`) +
+            FfiConverterFloat.allocationSize(value.`y`)
+    )
+
+    override fun write(value: Look, buf: ByteBuffer) {
+            FfiConverterFloat.write(value.`zoom`, buf)
+            FfiConverterFloat.write(value.`x`, buf)
+            FfiConverterFloat.write(value.`y`, buf)
     }
 }
 
@@ -3312,6 +3375,26 @@ internal object FfiConverterSequenceTypeTexture: FfiConverterRustBuffer<List<Tex
     
         
         FfiConverterTypeLighting.lower(`lighting`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Brings the badge `zoom` times closer with the point of its frame at
+         * `point_x`, `point_y` seen at `at_x`, `at_y` in the view (fractions of it
+         * from its middle, y down), as near as the frame lets it.
+         */ internal fun `look`(`zoom`: kotlin.Float, `pointX`: kotlin.Float, `pointY`: kotlin.Float, `atX`: kotlin.Float, `atY`: kotlin.Float): Look {
+            return FfiConverterTypeLook.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_luster_ffi_fn_func_look(
+    
+        
+        FfiConverterFloat.lower(`zoom`),
+        FfiConverterFloat.lower(`pointX`),
+        FfiConverterFloat.lower(`pointY`),
+        FfiConverterFloat.lower(`atX`),
+        FfiConverterFloat.lower(`atY`),_status)
 }
     )
     }

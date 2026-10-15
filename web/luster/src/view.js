@@ -1,6 +1,7 @@
 // <luster-view>: a badge minted from an SVG, lit in the studio. Drag to turn
 // it; it keeps spinning briefly with momentum, unless the system asks for
-// reduced motion.
+// reduced motion. Pinch to bring it closer and slide two fingers to look
+// about it; a double tap puts it back.
 import { Luster } from './index.js';
 import { LusterError } from './errors.js';
 import { Stage, studio as setUpStudio } from './stage.js';
@@ -47,6 +48,11 @@ const COARSEST = 0.4;
 /** Frames read together to judge the pace, by their median: one held up by
  *  the page, by a collection or a mint landing, is not the drawing's cost. */
 const PACE_FRAMES = 9;
+
+/** Two taps within this many milliseconds and CSS pixels of each other are a
+ *  double tap. */
+const DOUBLE_TAP_TIME = 300;
+const TAP_SLOP = 10;
 
 /** How far back a flick's speed is read from, and how long a finger may rest
  *  before letting go for the flick to count, in milliseconds. */
@@ -129,6 +135,20 @@ export class LusterView extends HTMLElement {
   /** Coarser did not help in this turn: it is not tried again until the next. */
   #held = false;
 
+  #zoom = 1;
+  /** The middle of what is seen, in fractions of the frame the badge fits,
+   *  from its middle. */
+  #look = { x: 0, y: 0 };
+  #zoomFrame = 0;
+  /** The fingers down, for a pinch. */
+  #touches = new Map();
+  /** The fingers' spread, the zoom and the point of the badge between them
+   *  as a pinch began. */
+  #pinch = null;
+  /** The same for Safari's trackpad gesture. */
+  #gesture = null;
+  #lastTap = null;
+
   constructor() {
     super();
     this.#shadow = this.attachShadow({ mode: 'open' });
@@ -140,6 +160,11 @@ export class LusterView extends HTMLElement {
     this.addEventListener('pointerup', (e) => this.#up(e));
     this.addEventListener('pointercancel', (e) => this.#up(e, true));
     this.addEventListener('lostpointercapture', (e) => this.#up(e, true));
+    // A trackpad's pinch: a wheel with Control held, and in Safari a gesture.
+    this.addEventListener('wheel', (e) => this.#wheel(e), { passive: false });
+    this.addEventListener('gesturestart', (e) => this.#gestureStart(e));
+    this.addEventListener('gesturechange', (e) => this.#gestureChange(e));
+    this.addEventListener('gestureend', (e) => this.#gestureEnd(e));
   }
 
   // MARK: Properties
@@ -222,6 +247,23 @@ export class LusterView extends HTMLElement {
 
   #momentum = true;
 
+  /** Whether a pinch brings the badge closer. Off, the badge is put back at
+   *  its size and a pinch is the page's. */
+  get zoomable() {
+    return this.#zoomable;
+  }
+
+  set zoomable(value) {
+    this.#zoomable = Boolean(value);
+    if (!this.#zoomable) {
+      this.#pinch = null;
+      this.#gesture = null;
+      this.#see(1, { x: 0, y: 0 }, { x: 0, y: 0 });
+    }
+  }
+
+  #zoomable = true;
+
   /** `idle`, `minting`, `ready` or `failed`. */
   get state() {
     return this.#state;
@@ -302,7 +344,12 @@ export class LusterView extends HTMLElement {
     }
     cancelAnimationFrame(this.#frame);
     this.#frame = 0;
+    cancelAnimationFrame(this.#zoomFrame);
+    this.#zoomFrame = 0;
     this.#pointer = null;
+    this.#touches.clear();
+    this.#pinch = null;
+    this.#gesture = null;
     this.#velocity = 0;
     // The GPU's copy goes; the badge stays, to show again if the element
     // comes back.
@@ -497,7 +544,7 @@ export class LusterView extends HTMLElement {
       this.#canvas.width = width;
       this.#canvas.height = height;
     }
-    stage.draw(this.#context, width, height);
+    stage.draw(this.#context, width, height, this.#zoom, this.#look);
   }
 
   // MARK: Turning it
@@ -507,9 +554,20 @@ export class LusterView extends HTMLElement {
   }
 
   #down(e) {
-    if (this.#pointer !== null || !e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     if (!this.#badge) return;
-    this.#pointer = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    if (e.pointerType === 'touch') this.#touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (this.#touches.size === 2 && this.#zoomable) {
+      // A second finger: the drag gives way to a pinch, without a flick.
+      this.#pointer = null;
+      this.#velocity = 0;
+      this.#lastTap = null;
+      const at = this.#between();
+      this.#pinch = { spread: this.#spread(), zoom: this.#zoom, point: this.#under(at) };
+      return;
+    }
+    if (this.#pointer !== null || this.#pinch || !e.isPrimary) return;
+    this.#pointer = { id: e.pointerId, x: e.clientX, y: e.clientY, from: { t: e.timeStamp, x: e.clientX, y: e.clientY } };
     try {
       this.setPointerCapture(e.pointerId);
     } catch {
@@ -521,6 +579,17 @@ export class LusterView extends HTMLElement {
   }
 
   #move(e) {
+    const touch = this.#touches.get(e.pointerId);
+    if (touch) {
+      touch.x = e.clientX;
+      touch.y = e.clientY;
+    }
+    if (this.#pinch) {
+      // The point of the badge between the fingers stays between them.
+      const pinch = this.#pinch;
+      if (touch && this.#touches.size >= 2) this.#see((pinch.zoom * this.#spread()) / pinch.spread, pinch.point, this.#between());
+      return;
+    }
     const pointer = this.#pointer;
     if (!pointer || e.pointerId !== pointer.id) return;
     const handling = this.#studio.handling;
@@ -536,12 +605,122 @@ export class LusterView extends HTMLElement {
   }
 
   #up(e, cancelled = false) {
+    this.#touches.delete(e.pointerId);
+    // A pinch ends with its fingers; one left behind does not drag.
+    if (this.#pinch) {
+      if (this.#touches.size < 2) this.#pinch = null;
+      return;
+    }
     const pointer = this.#pointer;
     if (!pointer || e.pointerId !== pointer.id) return;
     this.#pointer = null;
+    if (!cancelled) this.#tapped(pointer.from, e);
     const still = reducedMotion?.matches || !this.momentum;
     this.#velocity = cancelled || still ? 0 : this.#flick(e.timeStamp) * this.#studio.handling.spinPerPoint;
     this.#turnOn();
+  }
+
+  // MARK: Bringing it closer
+
+  /** The distance between the first two fingers down, CSS pixels. */
+  #spread() {
+    const [a, b] = this.#touches.values();
+    return Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+  }
+
+  /** The point halfway between the first two fingers down. */
+  #between() {
+    const [a, b] = this.#touches.values();
+    return this.#at((a.x + b.x) / 2, (a.y + b.y) / 2);
+  }
+
+  /** A point in the view, in fractions of it from its middle. */
+  #at(clientX, clientY) {
+    const box = this.getBoundingClientRect();
+    return {
+      x: (clientX - box.left) / Math.max(box.width, 1) - 0.5,
+      y: (clientY - box.top) / Math.max(box.height, 1) - 0.5,
+    };
+  }
+
+  /** The point of the badge's frame seen at `at`. */
+  #under(at) {
+    return { x: this.#look.x + at.x / this.#zoom, y: this.#look.y + at.y / this.#zoom };
+  }
+
+  /** Brings the badge `zoom` times closer with `point` of its frame seen at
+   *  `at` in the view, as near as the engine's frame lets it. */
+  #see(zoom, point, at) {
+    const engine = this.#studio?.engine;
+    if (!engine) return;
+    const look = engine.look(zoom, point.x, point.y, at.x, at.y);
+    ({ zoom } = look);
+    const { x, y } = look;
+    look.free();
+    if (zoom === this.#zoom && x === this.#look.x && y === this.#look.y) return;
+    this.#zoom = zoom;
+    this.#look = { x, y };
+    // Once a frame, however often the fingers move.
+    this.#zoomFrame ||= requestAnimationFrame(() => {
+      this.#zoomFrame = 0;
+      this.#draw();
+    });
+  }
+
+  /** A press let go where it began, soon: a second one soon after puts the
+   *  badge back at its size. */
+  #tapped(from, e) {
+    const near = (a) => Math.hypot(e.clientX - a.x, e.clientY - a.y) <= TAP_SLOP;
+    if (e.timeStamp - from.t > DOUBLE_TAP_TIME || !near(from)) return;
+    const last = this.#lastTap;
+    if (last && e.timeStamp - last.t <= DOUBLE_TAP_TIME && near(last)) {
+      this.#lastTap = null;
+      this.#see(1, { x: 0, y: 0 }, { x: 0, y: 0 });
+    } else {
+      this.#lastTap = { t: e.timeStamp, x: e.clientX, y: e.clientY };
+    }
+  }
+
+  #wheel(e) {
+    if (!this.#badge || !this.#zoomable) return;
+    const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? this.clientHeight : 1;
+    if (e.ctrlKey) {
+      e.preventDefault();
+      if (this.#gesture) return;
+      const at = this.#at(e.clientX, e.clientY);
+      this.#see(this.#zoom * Math.exp((-e.deltaY * unit) / 100), this.#under(at), at);
+      return;
+    }
+    // At its size the page scrolls; closer, a slide looks about the badge.
+    if (this.#zoom === 1) return;
+    e.preventDefault();
+    const frame = { width: this.clientWidth * this.#zoom, height: this.clientHeight * this.#zoom };
+    const look = this.#look;
+    const to = { x: look.x + (e.deltaX * unit) / frame.width, y: look.y + (e.deltaY * unit) / frame.height };
+    this.#see(this.#zoom, to, { x: 0, y: 0 });
+  }
+
+  // Safari's own, for a trackpad; on a phone the fingers are pointers, and
+  // the page is kept from zooming either way.
+  #gestureStart(e) {
+    if (!this.#zoomable) return;
+    e.preventDefault();
+    if (!this.#badge || this.#touches.size > 0) return;
+    const at = this.#at(e.clientX, e.clientY);
+    this.#gesture = { zoom: this.#zoom, point: this.#under(at), at };
+  }
+
+  #gestureChange(e) {
+    if (!this.#zoomable) return;
+    e.preventDefault();
+    const gesture = this.#gesture;
+    if (gesture) this.#see(gesture.zoom * e.scale, gesture.point, gesture.at);
+  }
+
+  #gestureEnd(e) {
+    if (!this.#zoomable) return;
+    e.preventDefault();
+    this.#gesture = null;
   }
 
   /** The finger's speed across as it let go, points a second: none if it

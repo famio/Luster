@@ -15,6 +15,8 @@ import dev.famio.luster.core.handling
 import dev.famio.luster.core.lamp
 import dev.famio.luster.core.lightDirection
 import dev.famio.luster.core.lightingPreset
+import dev.famio.luster.core.look
+import dev.famio.luster.core.Look
 import dev.famio.luster.core.studioCamera
 import dev.famio.luster.core.studioLights
 import com.google.android.filament.Camera
@@ -70,6 +72,7 @@ class LusterStage(private val context: Context) {
         // badge rests: the engine's, so a flick feels the same everywhere.
         private val handling = handling()
         val restingPose = floatArrayOf(handling.restingTilt, handling.restingSpin)
+        private val atRest = Look(1f, 0f, 0f)
         /**
          * What the studio's environment and camera are worth to this
          * renderer: the engine's, matched against the Apple side.
@@ -128,6 +131,16 @@ class LusterStage(private val context: Context) {
 
     var momentumEnabled = true
 
+    /** Whether a pinch brings the badge closer; turned off, it is put back. */
+    var zoomEnabled = true
+        set(value) {
+            field = value
+            if (!value) {
+                pinch = null
+                see(atRest)
+            }
+        }
+
     /** Set by [release]: the engine is gone, and the setters do nothing. */
     var released = false
         private set
@@ -157,6 +170,18 @@ class LusterStage(private val context: Context) {
     private var pose = restingPose.copyOf()
     private var velocity = 0f
     private var dragging = false
+
+    /**
+     * How close a pinch has brought the badge, and where it looks: a point of
+     * the frame it fits at rest, in fractions of that frame from its middle,
+     * y down. Kept across badges, as the pose is.
+     */
+    private var look = atRest
+    /** The zoom and the point of the badge between the fingers as a pinch began. */
+    private var pinch: Triple<Float, Float, Float>? = null
+    /** The view's size, pixels. */
+    private var width = 1
+    private var height = 1
     private var lastFrame = 0L
 
     /**
@@ -224,6 +249,8 @@ class LusterStage(private val context: Context) {
     fun resize(width: Int, height: Int) {
         if (released || width <= 0 || height <= 0) return
         view.viewport = Viewport(0, 0, width, height)
+        this.width = width
+        this.height = height
         aspect = width.toFloat() / height.toFloat()
         frame()
     }
@@ -310,6 +337,47 @@ class LusterStage(private val context: Context) {
             wake()
         }
     }
+
+    // MARK: Bringing it closer
+
+    /**
+     * Two fingers came down, their middle at [x], [y] pixels in the view; the
+     * drag gives way to them without a flick.
+     */
+    fun pinchStarted(x: Float, y: Float) {
+        if (!zoomEnabled || model == null) return
+        dragging = false
+        velocity = 0f
+        val (atX, atY) = fraction(x, y)
+        pinch = Triple(look.zoom, look.x + atX / look.zoom, look.y + atY / look.zoom)
+    }
+
+    /**
+     * The fingers are [scale] times as far apart as they began, their middle
+     * at [x], [y]: the point of the badge that was between them stays there.
+     */
+    fun pinched(scale: Float, x: Float, y: Float) {
+        val (zoom, pointX, pointY) = pinch ?: return
+        val (atX, atY) = fraction(x, y)
+        see(look(zoom * scale, pointX, pointY, atX, atY))
+    }
+
+    fun pinchEnded() {
+        pinch = null
+    }
+
+    /** Back at its size, in the middle: a double tap. */
+    fun putBack() = see(atRest)
+
+    private fun see(look: Look) {
+        if (look == this.look) return
+        this.look = look
+        frame()
+    }
+
+    /** A point in the view, in fractions of it from its middle. */
+    private fun fraction(x: Float, y: Float) =
+        x / max(width, 1) - 0.5f to y / max(height, 1) - 0.5f
 
     /** Whether the system has animations turned off, Android's way of asking for reduced motion. */
     private fun reducedMotion() =
@@ -487,6 +555,12 @@ class LusterStage(private val context: Context) {
         val fov = fieldOfView(badgeSize.first, badgeSize.second, aspect)
         camera.setProjection(fov.toDouble(), aspect.toDouble(), 0.1, 100.0, Camera.Fov.VERTICAL)
         camera.lookAt(0.0, 0.0, setup.distance.toDouble(), 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+        // Closer is a part of that frame, from where the camera stands: the
+        // light and its reflections stay as they are. Filament's shift is in
+        // views across, half the clip's units.
+        val zoom = look.zoom.toDouble()
+        camera.setScaling(zoom, zoom)
+        camera.setShift(-zoom * look.x, zoom * look.y)
         redraw()
     }
 

@@ -309,7 +309,8 @@ pub fn field_of_view(width: f32, height: f32, aspect: f32) -> f32 {
 }
 
 /// How the badge answers a drag, the same on every platform: radians per
-/// point dragged, how far it may tip, and how a flick's spin fades.
+/// point dragged, how far it may tip, how a flick's spin fades, and how close
+/// a pinch brings it.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Handling {
     pub spin_per_point: f32,
@@ -319,6 +320,8 @@ pub struct Handling {
     pub damping: f32,
     /// Below this spin speed (radians per second) the badge comes to rest.
     pub resting_speed: f32,
+    /// The closest a pinch brings the badge, times its size at rest.
+    pub closest: f32,
 }
 
 pub const HANDLING: Handling = Handling {
@@ -327,6 +330,7 @@ pub const HANDLING: Handling = Handling {
     tilt_limit: 0.55,
     damping: 0.94,
     resting_speed: 0.012,
+    closest: 5.0,
 };
 
 /// Where the badge sits before it is touched, tilt (about x) and spin (about
@@ -349,9 +353,64 @@ pub fn coast(velocity: f32, dt: f32) -> (f32, f32) {
     (turn, if velocity.abs() < HANDLING.resting_speed { 0.0 } else { velocity })
 }
 
+/// What a view shows of the badge brought closer: `zoom` times its size at
+/// rest, centred on `x`, `y`, a point of the frame it fits at rest, in
+/// fractions of that frame from its middle, x to the right and y down.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Look {
+    pub zoom: f32,
+    pub x: f32,
+    pub y: f32,
+}
+
+impl Look {
+    pub const AT_REST: Look = Look { zoom: 1.0, x: 0.0, y: 0.0 };
+
+    /// The point of the frame seen at `at` in the view, in fractions of the
+    /// view from its middle.
+    pub fn under(self, at: [f32; 2]) -> [f32; 2] {
+        [self.x + at[0] / self.zoom, self.y + at[1] / self.zoom]
+    }
+}
+
+/// Brings the badge `zoom` times closer with `point` of its frame seen at `at`
+/// in the view, as near as the frame lets it: no closer than
+/// [`Handling::closest`], no further than at rest, and never showing more than
+/// the frame. A pinch keeps the point between the fingers there; a slide
+/// moves what is in the middle.
+pub fn look(zoom: f32, point: [f32; 2], at: [f32; 2]) -> Look {
+    let zoom = if zoom.is_finite() { zoom.clamp(1.0, HANDLING.closest) } else { 1.0 };
+    let reach = (1.0 - 1.0 / zoom) / 2.0;
+    let centre = |p: f32, a: f32| {
+        let c = p - a / zoom;
+        if c.is_finite() { c.clamp(-reach, reach) } else { 0.0 }
+    };
+    Look { zoom, x: centre(point[0], at[0]), y: centre(point[1], at[1]) }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_pinch_keeps_the_point_between_the_fingers_where_it_is() {
+        let start = Look { zoom: 2.0, x: 0.1, y: -0.05 };
+        let at = [0.3, -0.2];
+        let point = start.under(at);
+        let closer = look(3.0, point, at);
+        let [x, y] = closer.under(at);
+        assert!((x - point[0]).abs() < 1e-6 && (y - point[1]).abs() < 1e-6);
+    }
+
+    #[test]
+    fn the_badge_comes_no_closer_than_the_closest_and_shows_no_more_than_its_frame() {
+        assert_eq!(look(40.0, [0.0, 0.0], [0.0, 0.0]).zoom, HANDLING.closest);
+        assert_eq!(look(0.2, [0.3, 0.3], [0.0, 0.0]), Look::AT_REST);
+        assert_eq!(look(f32::NAN, [0.0, 0.0], [0.0, 0.0]), Look::AT_REST);
+        // Twice as close, a quarter of the frame either way at most.
+        let far = look(2.0, [0.9, -0.9], [0.0, 0.0]);
+        assert_eq!((far.x, far.y), (0.25, -0.25));
+    }
 
     #[test]
     fn a_square_badge_fits_the_plain_framing_and_a_narrow_view_widens_it() {

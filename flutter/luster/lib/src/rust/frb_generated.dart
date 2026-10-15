@@ -67,7 +67,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 116726236;
+  int get rustContentHash => -893883561;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -121,6 +121,14 @@ abstract class RustLibApi extends BaseApi {
   });
 
   LightingPreset crateApiLusterLightingPreset({required Lighting lighting});
+
+  Look crateApiLusterLook({
+    required double zoom,
+    required double pointX,
+    required double pointY,
+    required double atX,
+    required double atY,
+  });
 
   Future<String> crateApiLusterRealitykitToneCube();
 
@@ -489,6 +497,41 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "lighting_preset", argNames: ["lighting"]);
 
   @override
+  Look crateApiLusterLook({
+    required double zoom,
+    required double pointX,
+    required double pointY,
+    required double atX,
+    required double atY,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_f_32(zoom, serializer);
+          sse_encode_f_32(pointX, serializer);
+          sse_encode_f_32(pointY, serializer);
+          sse_encode_f_32(atX, serializer);
+          sse_encode_f_32(atY, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_look,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiLusterLookConstMeta,
+        argValues: [zoom, pointX, pointY, atX, atY],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiLusterLookConstMeta => const TaskConstMeta(
+    debugName: "look",
+    argNames: ["zoom", "pointX", "pointY", "atX", "atY"],
+  );
+
+  @override
   Future<String> crateApiLusterRealitykitToneCube() {
     return handler.executeNormal(
       NormalTask(
@@ -497,7 +540,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 13,
+            funcId: 14,
             port: port_,
           );
         },
@@ -524,7 +567,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 15,
             port: port_,
           );
         },
@@ -548,7 +591,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_scene_calibration,
@@ -573,7 +616,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 16,
+            funcId: 17,
             port: port_,
           );
         },
@@ -597,7 +640,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_rgba,
@@ -619,7 +662,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_camera,
@@ -641,7 +684,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_light,
@@ -663,7 +706,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -838,14 +881,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Handling dco_decode_handling(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
     return Handling(
       spinPerPoint: dco_decode_f_32(arr[0]),
       tiltPerPoint: dco_decode_f_32(arr[1]),
       tiltLimit: dco_decode_f_32(arr[2]),
       restingTilt: dco_decode_f_32(arr[3]),
       restingSpin: dco_decode_f_32(arr[4]),
+      closest: dco_decode_f_32(arr[5]),
     );
   }
 
@@ -944,6 +988,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<Submesh> dco_decode_list_submesh(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_submesh).toList();
+  }
+
+  @protected
+  Look dco_decode_look(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return Look(
+      zoom: dco_decode_f_32(arr[0]),
+      x: dco_decode_f_32(arr[1]),
+      y: dco_decode_f_32(arr[2]),
+    );
   }
 
   @protected
@@ -1278,12 +1335,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_tiltLimit = sse_decode_f_32(deserializer);
     var var_restingTilt = sse_decode_f_32(deserializer);
     var var_restingSpin = sse_decode_f_32(deserializer);
+    var var_closest = sse_decode_f_32(deserializer);
     return Handling(
       spinPerPoint: var_spinPerPoint,
       tiltPerPoint: var_tiltPerPoint,
       tiltLimit: var_tiltLimit,
       restingTilt: var_restingTilt,
       restingSpin: var_restingSpin,
+      closest: var_closest,
     );
   }
 
@@ -1412,6 +1471,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       ans_.add(sse_decode_submesh(deserializer));
     }
     return ans_;
+  }
+
+  @protected
+  Look sse_decode_look(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_zoom = sse_decode_f_32(deserializer);
+    var var_x = sse_decode_f_32(deserializer);
+    var var_y = sse_decode_f_32(deserializer);
+    return Look(zoom: var_zoom, x: var_x, y: var_y);
   }
 
   @protected
@@ -1738,6 +1806,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_f_32(self.tiltLimit, serializer);
     sse_encode_f_32(self.restingTilt, serializer);
     sse_encode_f_32(self.restingSpin, serializer);
+    sse_encode_f_32(self.closest, serializer);
   }
 
   @protected
@@ -1864,6 +1933,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     for (final item in self) {
       sse_encode_submesh(item, serializer);
     }
+  }
+
+  @protected
+  void sse_encode_look(Look self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_32(self.zoom, serializer);
+    sse_encode_f_32(self.x, serializer);
+    sse_encode_f_32(self.y, serializer);
   }
 
   @protected
