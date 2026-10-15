@@ -363,16 +363,6 @@ pub struct Look {
     pub y: f32,
 }
 
-impl Look {
-    pub const AT_REST: Look = Look { zoom: 1.0, x: 0.0, y: 0.0 };
-
-    /// The point of the frame seen at `at` in the view, in fractions of the
-    /// view from its middle.
-    pub fn under(self, at: [f32; 2]) -> [f32; 2] {
-        [self.x + at[0] / self.zoom, self.y + at[1] / self.zoom]
-    }
-}
-
 /// Brings the badge `zoom` times closer with `point` of its frame seen at `at`
 /// in the view, as near as the frame lets it: no closer than
 /// [`Handling::closest`], no further than at rest, and never showing more than
@@ -392,21 +382,28 @@ pub fn look(zoom: f32, point: [f32; 2], at: [f32; 2]) -> Look {
 mod tests {
     use super::*;
 
+    const AT_REST: Look = Look { zoom: 1.0, x: 0.0, y: 0.0 };
+
+    /// The point of the frame `look` shows at `at` in the view.
+    fn under(look: Look, at: [f32; 2]) -> [f32; 2] {
+        [look.x + at[0] / look.zoom, look.y + at[1] / look.zoom]
+    }
+
     #[test]
     fn a_pinch_keeps_the_point_between_the_fingers_where_it_is() {
         let start = Look { zoom: 2.0, x: 0.1, y: -0.05 };
         let at = [0.3, -0.2];
-        let point = start.under(at);
+        let point = under(start, at);
         let closer = look(3.0, point, at);
-        let [x, y] = closer.under(at);
+        let [x, y] = under(closer, at);
         assert!((x - point[0]).abs() < 1e-6 && (y - point[1]).abs() < 1e-6);
     }
 
     #[test]
     fn the_badge_comes_no_closer_than_the_closest_and_shows_no_more_than_its_frame() {
         assert_eq!(look(40.0, [0.0, 0.0], [0.0, 0.0]).zoom, HANDLING.closest);
-        assert_eq!(look(0.2, [0.3, 0.3], [0.0, 0.0]), Look::AT_REST);
-        assert_eq!(look(f32::NAN, [0.0, 0.0], [0.0, 0.0]), Look::AT_REST);
+        assert_eq!(look(0.2, [0.3, 0.3], [0.0, 0.0]), AT_REST);
+        assert_eq!(look(f32::NAN, [0.0, 0.0], [0.0, 0.0]), AT_REST);
         // Twice as close, a quarter of the frame either way at most.
         let far = look(2.0, [0.9, -0.9], [0.0, 0.0]);
         assert_eq!((far.x, far.y), (0.25, -0.25));
