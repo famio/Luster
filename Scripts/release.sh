@@ -50,11 +50,26 @@ VERSIONED=(Package.swift "$FLUTTER_MANIFEST" rust/Cargo.toml rust/Cargo.lock flu
            android/sample/build.gradle.kts web/luster/package.json web/luster/package-lock.json
            Apps/LusterWeb/package-lock.json)
 KEEP="$(mktemp -d)"
+# Puts back what a dry run wrote, however it ends: a step that fails stops
+# the script, and leaves nothing behind either.
+put_back() {
+    echo
+    echo "Putting the tree back as it was; nothing was committed, pushed or published."
+    for file in "${VERSIONED[@]}"; do
+        cp "$KEEP/$file" "$file"
+    done
+    rm -rf "$KEEP"
+    # cargo still takes its builds of the version put back for fresh, though
+    # the libraries they made now hold this run's version; with the version's
+    # source newer than them, the next build makes them again.
+    touch rust/crates/luster-core/src/lib.rs
+}
 if [ "$DRY" = 1 ]; then
     for file in "${VERSIONED[@]}"; do
         mkdir -p "$KEEP/$(dirname "$file")"
         cp "$file" "$KEEP/$file"
     done
+    trap put_back EXIT
 fi
 
 say() { printf '\n== %s\n' "$1"; }
@@ -133,16 +148,6 @@ point "$FLUTTER_MANIFEST" engine luster_dart "$FLUTTER_URL" "$FLUTTER_CHECKSUM"
 if [ "$DRY" = 1 ]; then
     say "dry run"
     git --no-pager diff --stat
-    echo
-    echo "Putting the tree back as it was; nothing was committed, pushed or published."
-    for file in "${VERSIONED[@]}"; do
-        cp "$KEEP/$file" "$file"
-    done
-    rm -rf "$KEEP"
-    # cargo still takes its builds of the version put back for fresh, though
-    # the libraries they made now hold this run's version; with the version's
-    # source newer than them, the next build makes them again.
-    touch rust/crates/luster-core/src/lib.rs
     exit 0
 fi
 
