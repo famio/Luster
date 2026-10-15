@@ -332,6 +332,7 @@ class _LusterViewState extends State<LusterView> with SingleTickerProviderStateM
   /// Two fingers or a trackpad, their middle at [local]: the drag gives way
   /// to them without a flick.
   void _pinchStarted(Offset local) {
+    if (!stage.showing) return;
     final (atX, atY) = _fraction(local);
     pinched = true;
     pinch = (look.zoom, look.x + atX / look.zoom, look.y + atY / look.zoom);
@@ -529,12 +530,12 @@ class _LusterViewState extends State<LusterView> with SingleTickerProviderStateM
         ? AntiAliasingMode.fxaa
         : AntiAliasingMode.auto;
     if (!ready) return _withPlaceholder(context, const SizedBox.expand());
-    // One finger turns the badge; two, or a trackpad, pinch and slide it.
-    // A finger added or lifted ends the gesture and starts another.
+    // One finger turns the badge; two, or a trackpad, which counts as two,
+    // pinch and slide it. A finger added or lifted ends the gesture, and a
+    // finger moving after starts another.
     final view = GestureDetector(
       onScaleStart: (d) {
-        if (widget.zoomEnabled &&
-            (d.pointerCount >= 2 || d.kind == ui.PointerDeviceKind.trackpad)) {
+        if (widget.zoomEnabled && d.pointerCount >= 2) {
           _pinchStarted(d.localFocalPoint);
           return;
         }
@@ -547,7 +548,7 @@ class _LusterViewState extends State<LusterView> with SingleTickerProviderStateM
       },
       onScaleUpdate: (d) {
         if (pinch != null) {
-          if (d.pointerCount >= 2 || d.pointerCount == 0) _pinched(d.scale, d.localFocalPoint);
+          if (d.pointerCount >= 2) _pinched(d.scale, d.localFocalPoint);
           return;
         }
         if (!dragging) return;
@@ -586,6 +587,25 @@ class _LusterViewState extends State<LusterView> with SingleTickerProviderStateM
         },
       ),
     );
-    return _withPlaceholder(context, view);
+    // The gesture tells of no end when the last finger lifts without moving
+    // after another lifted: the fingers are counted here, and the pinch is
+    // over once none is down.
+    final counted = Listener(
+      onPointerDown: (_) => _down++,
+      onPointerUp: (_) => _lifted(),
+      onPointerCancel: (_) => _lifted(),
+      child: view,
+    );
+    return _withPlaceholder(context, counted);
+  }
+
+  /// Fingers on the view.
+  int _down = 0;
+
+  void _lifted() {
+    _down = math.max(0, _down - 1);
+    if (_down > 0) return;
+    pinch = null;
+    pinched = false;
   }
 }
