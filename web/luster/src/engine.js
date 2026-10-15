@@ -38,8 +38,10 @@ function spawn() {
   if (!/^https?:$/.test(here.protocol) || here.origin === globalThis.location?.origin) {
     return new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
   }
-  const worker = import.meta.url.replace(/[^/]*$/, 'worker.js');
-  bridge ??= URL.createObjectURL(new Blob([`import ${JSON.stringify(worker)};`], { type: 'text/javascript' }));
+  const worker = new URL(import.meta.url);
+  worker.pathname = worker.pathname.replace(/[^/]*$/, 'worker.js');
+  worker.search = worker.hash = '';
+  bridge ??= URL.createObjectURL(new Blob([`import ${JSON.stringify(worker.href)};`], { type: 'text/javascript' }));
   return new Worker(bridge, { type: 'module' });
 }
 
@@ -65,7 +67,7 @@ export class Engine {
     this.ready = compile()
       .then((module) => this.call('init', { module }))
       .catch((e) => {
-        throw e instanceof Gone ? e : { kind: 'engineFailure', message: `the engine could not start: ${e.message ?? e}`, trapped: true };
+        throw e instanceof Gone || e?.kind ? e : { kind: 'engineFailure', message: `the engine could not start: ${e.message ?? e}`, trapped: true };
       });
     // Whoever calls next hears of it.
     this.ready.catch(() => {});
@@ -73,6 +75,8 @@ export class Engine {
 
   call(op, args = {}, transfer = []) {
     return new Promise((resolve, reject) => {
+      // A worker ended, or one whose script never loaded, answers nothing.
+      if (this.ended) return reject(this.ended);
       const call = ++this.serial;
       this.calls.set(call, { resolve, reject });
       this.worker.postMessage({ call, op, ...args }, transfer);
@@ -105,6 +109,7 @@ export class Engine {
   }
 
   end(error) {
+    this.ended ??= error;
     for (const { reject } of this.calls.values()) reject(error);
     this.calls.clear();
   }
