@@ -47,7 +47,7 @@ fi
 VERSIONED=(Package.swift "$FLUTTER_MANIFEST" rust/Cargo.toml rust/Cargo.lock flutter/luster/pubspec.yaml
            flutter/luster/example/pubspec.lock flutter/luster/android/build.gradle
            android/luster/build.gradle.kts android/luster-compose/build.gradle.kts
-           android/sample/build.gradle.kts)
+           android/sample/build.gradle.kts web/luster/package.json web/luster/package-lock.json)
 KEEP="$(mktemp -d)"
 if [ "$DRY" = 1 ]; then
     for file in "${VERSIONED[@]}"; do
@@ -70,6 +70,10 @@ say "version $VERSION"
 /usr/bin/sed -i '' "s/^\( *version = \).*/\1\"$VERSION\"/" android/luster/build.gradle.kts 2>/dev/null || true
 /usr/bin/sed -i '' "s/^\( *version = \).*/\1\"$VERSION\"/" android/luster-compose/build.gradle.kts 2>/dev/null || true
 /usr/bin/sed -i '' "s/^version '.*'/version '$VERSION'/" flutter/luster/android/build.gradle
+# The lock names the package's version at its top and as its root package.
+/usr/bin/sed -i '' "s/^  \"version\": \".*\"/  \"version\": \"$VERSION\"/" web/luster/package.json web/luster/package-lock.json
+/usr/bin/sed -i '' "/^    \"\": {\$/,/^      \"version\":/ s/^      \"version\": \".*\"/      \"version\": \"$VERSION\"/" \
+    web/luster/package-lock.json
 
 say "engine"
 Scripts/build-xcframework.sh release

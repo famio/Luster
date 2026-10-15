@@ -28,7 +28,10 @@ jobs:
               "$(grep -m1 '^version: ' flutter/luster/pubspec.yaml | cut -d' ' -f2)" \
               "$(grep -m1 "^version '" flutter/luster/android/build.gradle | cut -d"'" -f2)" \
               "$(grep -m1 '^version = ' android/luster/build.gradle.kts | cut -d'"' -f2)" \
-              "$(grep -m1 '^version = ' android/luster-compose/build.gradle.kts | cut -d'"' -f2)"; do
+              "$(grep -m1 '^version = ' android/luster-compose/build.gradle.kts | cut -d'"' -f2)" \
+              "$(node -p 'require("./web/luster/package.json").version')" \
+              "$(node -p 'require("./web/luster/package-lock.json").version')" \
+              "$(node -p 'require("./web/luster/package-lock.json").packages[""].version')"; do
             [ "$found" = "$engine" ] || { echo "a version is $found, the engine's is $engine" >&2; exit 1; }
           done
 
