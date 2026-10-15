@@ -372,8 +372,8 @@ final class LusterBadge {
 
   /// The badge as a glTF binary: meshes, materials and textures in one file,
   /// its metal plated in [metal] (null takes the engine's pale gold), [scale]
-  /// badge-widths across. The same badge always writes the same bytes. Runs
-  /// on Rust's threads.
+  /// units (metres, in glTF) across. The same badge always writes the same
+  /// bytes. Runs on Rust's threads.
   Future<Uint8List> glb({double scale = 1, LusterColor? metal}) =>
       engine.struck.glb(scale: scale, metal: metalRgba(metal));
 

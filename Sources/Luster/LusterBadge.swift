@@ -16,7 +16,7 @@ public final class LusterBadge: Sendable, Hashable {
     }
 
     /// The badge as a glTF binary: meshes, materials and textures in one file,
-    /// its metal plated in `metal`, `scale` badge-widths across.
+    /// its metal plated in `metal`, `scale` units (metres, in glTF) across.
     ///
     /// The same badge always writes the same bytes, so two exports can be
     /// compared directly. Runs off the calling actor.

@@ -1009,7 +1009,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_luster_ffi_checksum_method_lusterbadge_design_key() and 0xFFFF) != 62017) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_luster_ffi_checksum_method_lusterbadge_glb() and 0xFFFF) != 53134) {
+    if ((lib.uniffi_luster_ffi_checksum_method_lusterbadge_glb() and 0xFFFF) != 33321) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_luster_ffi_checksum_method_lusterbadge_materials() and 0xFFFF) != 21961) {
@@ -1477,8 +1477,8 @@ internal interface LusterBadgeInterface {
     
     /**
      * The badge as a glTF binary, textures and all, its metal plated in
-     * `metal`, `scale` badge-widths across. Blocks: call it off the main
-     * thread.
+     * `metal`, `scale` units (metres, in glTF) across. Blocks: call it off
+     * the main thread.
      */
     fun `glb`(`scale`: kotlin.Float, `metal`: Rgba): kotlin.ByteArray
     
@@ -1614,8 +1614,8 @@ internal open class LusterBadge: Disposable, AutoCloseable, LusterBadgeInterface
     
     /**
      * The badge as a glTF binary, textures and all, its metal plated in
-     * `metal`, `scale` badge-widths across. Blocks: call it off the main
-     * thread.
+     * `metal`, `scale` units (metres, in glTF) across. Blocks: call it off
+     * the main thread.
      */override fun `glb`(`scale`: kotlin.Float, `metal`: Rgba): kotlin.ByteArray {
             return FfiConverterByteArray.lift(
     callWithHandle {

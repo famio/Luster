@@ -594,8 +594,8 @@ public protocol LusterBadgeProtocol: AnyObject, Sendable {
     
     /**
      * The badge as a glTF binary, textures and all, its metal plated in
-     * `metal`, `scale` badge-widths across. Blocks: call it off the main
-     * thread.
+     * `metal`, `scale` units (metres, in glTF) across. Blocks: call it off
+     * the main thread.
      */
     func glb(scale: Float, metal: Rgba)  -> Data
     
@@ -676,8 +676,8 @@ open func designKey() -> String  {
     
     /**
      * The badge as a glTF binary, textures and all, its metal plated in
-     * `metal`, `scale` badge-widths across. Blocks: call it off the main
-     * thread.
+     * `metal`, `scale` units (metres, in glTF) across. Blocks: call it off
+     * the main thread.
      */
 open func glb(scale: Float, metal: Rgba) -> Data  {
     return try!  FfiConverterData.lift(try! rustCall() {
@@ -2828,7 +2828,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_luster_ffi_checksum_method_lusterbadge_design_key() != 62017) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_luster_ffi_checksum_method_lusterbadge_glb() != 53134) {
+    if (uniffi_luster_ffi_checksum_method_lusterbadge_glb() != 33321) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_luster_ffi_checksum_method_lusterbadge_materials() != 21961) {

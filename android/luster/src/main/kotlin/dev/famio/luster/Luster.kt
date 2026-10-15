@@ -137,8 +137,8 @@ class LusterBadge internal constructor(internal val core: dev.famio.luster.core.
 
     /**
      * The badge as a glTF binary: meshes, materials and textures in one file,
-     * its metal plated in [metal], [scale] badge-widths across. The same badge
-     * always writes the same bytes. Runs on [Dispatchers.Default].
+     * its metal plated in [metal], [scale] units (metres, in glTF) across. The
+     * same badge always writes the same bytes. Runs on [Dispatchers.Default].
      */
     suspend fun glb(scale: Float = 1f, metal: LusterColor = LusterColor.Gold): ByteArray =
         withContext(Dispatchers.Default) { core.glb(scale, metal.core()) }

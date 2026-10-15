@@ -198,8 +198,8 @@ impl LusterBadge {
     }
 
     /// The badge as a glTF binary, textures and all, its metal plated in
-    /// `metal`, `scale` badge-widths across. Blocks: call it off the main
-    /// thread.
+    /// `metal`, `scale` units (metres, in glTF) across. Blocks: call it off
+    /// the main thread.
     pub fn glb(&self, scale: f32, metal: Rgba) -> Vec<u8> {
         luster_core::export::glb(&self.0, scale, metal.into())
     }
