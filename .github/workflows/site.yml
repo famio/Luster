@@ -1,0 +1,64 @@
+name: Site
+
+# luster.famio.dev: Apps/LusterWeb, on Cloudflare Workers. It is deployed from
+# what CI has passed on main, or by hand.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time.
+concurrency:
+  group: site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Only what was pushed here: a pull request's CI runs from a fork's branch,
+    # which may be called main too.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: rustup show active-toolchain || rustup toolchain install
+        working-directory: rust
+      - name: wasm-bindgen, the version luster-wasm pins
+        run: |
+          version=$(sed -nE 's/^wasm-bindgen = "=([0-9.]+)"/\1/p' rust/crates/luster-wasm/Cargo.toml)
+          cargo install wasm-bindgen-cli --version "$version" --locked
+      - run: Scripts/build-wasm.sh
+      - run: npm ci
+        working-directory: Apps/LusterWeb
+      - run: npm run build
+        working-directory: Apps/LusterWeb
+      # CI runs for pushes side by side, and an earlier one can finish later:
+      # only main's latest goes out, and a later run deploys that.
+      - name: Still main's latest
+        id: latest
+        run: |
+          git fetch --depth=1 origin main
+          if [ "${{ github.event_name }}" = workflow_dispatch ] || [ "$(git rev-parse FETCH_HEAD)" = "$(git rev-parse HEAD)" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "main has moved on from $(git rev-parse --short HEAD); its own run deploys it"
+          fi
+      - if: steps.latest.outputs.deploy == 'true'
+        run: npx wrangler deploy
+        working-directory: Apps/LusterWeb
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
