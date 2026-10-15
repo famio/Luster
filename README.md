@@ -14,8 +14,9 @@ Luster builds the whole object from the document's paths: the silhouette, the en
 cells, the raised gold line work, the rolled edge, the sandblasted reverse. It ships no
 3D model assets and no artwork.
 
-The engine is Rust, shared by a Swift package, a Kotlin library and a Flutter package,
-so the same document gives the same badge, to the byte, on every platform.
+The engine is Rust, shared by a Swift package, a Kotlin library, a Flutter package and
+an npm package, so the same document gives the same badge, to the byte, on every
+platform.
 
 ## Requirements
 
@@ -24,6 +25,7 @@ so the same document gives the same badge, to the byte, on every platform.
 | Apple | iOS 18 or macOS 15, Swift 6 |
 | Android | Android 7 (API 24) |
 | Flutter | Flutter 3.47.1, with Flutter GPU enabled ([see below](#flutter)) |
+| Web | A browser with WebAssembly, module workers and WebGL 2; three.js 0.186 for the view |
 
 ## Install
 
@@ -47,6 +49,12 @@ implementation("dev.famio:luster-compose:0.3.0")  // Compose; brings luster with
 ```yaml
 dependencies:
   luster: ^0.3.0
+```
+
+**Web** — on npm:
+
+```sh
+npm install @famio/luster three
 ```
 
 ## Quick start
@@ -78,6 +86,13 @@ import 'package:luster/luster.dart';
 LusterView(source: LusterSource.url(Uri.parse('https://example.com/badge.svg')))
 ```
 
+**Web**
+
+```html
+<script type="module">import '@famio/luster/view';</script>
+<luster-view src="badge.svg"></luster-view>
+```
+
 Drag to turn the badge; a flick keeps it turning, unless the system asks for reduced
 motion or `momentumEnabled` is false. Pinch to bring it up to five times closer and
 slide two fingers to look about it; a double tap puts it back, and `zoomEnabled` set to
@@ -101,7 +116,8 @@ LusterView(source: .url(url)) { state in
 
 ## Settings
 
-Every platform has the same settings under the same names.
+The apps' platforms have the same settings under the same names; the web's are
+attributes of `<luster-view>` ([see below](#web)).
 
 ```swift
 LusterView(source: .url(url),
@@ -152,6 +168,9 @@ final still = await LusterSnapshot.image(badge, pixelSize: 512);    // ui.Image
 ```
 
 ```js
+import { Luster } from '@famio/luster';
+import { LusterSnapshot } from '@famio/luster/snapshot';
+
 const badge = await Luster.mint(svg, { metalLines: true });
 const glb = await badge.glb();
 const still = await LusterSnapshot.image(badge, { pixelSize: 512 });  // PNG Blob
@@ -167,14 +186,16 @@ const still = await LusterSnapshot.image(badge, { pixelSize: 512 });  // PNG Blo
   badge.
 - **Prewarming** — `LusterEngine.prewarm()` (Swift) or `Luster.prewarm()` (Android) at
   launch prepares the lighting ahead of the first badge; `Luster.init()` does the same
-  in Flutter. A view starts it too, alongside its first mint, if the app has not.
-- **Cancelling** the task or coroutine stops a mint, unless someone else still wants the
-  same badge.
+  in Flutter and fetches the engine on the web. A view starts it too, alongside its
+  first mint, if the app has not.
+- **Cancelling** the task or coroutine, or on the web the `AbortSignal` given to the
+  mint, stops it, unless someone else still wants the same badge.
 
 ### Errors
 
 A mint that fails throws `LusterError` (Swift), a subclass of `LusterException`
-(Kotlin), or a `LusterException` with a `kind` (Dart). The cases are the same on every
+(Kotlin), a `LusterException` with a `kind` (Dart), or rejects with a `LusterError`
+with a `kind` (web). The cases are the same on every
 platform:
 
 | Case | Why |
@@ -186,7 +207,7 @@ platform:
 ## From the web
 
 `LusterSource.url` fetches with the loader in `LusterEngine.loader` (Swift) or
-`Luster.loader` (Kotlin, Dart). Documents over 20 MB are refused. The default loaders
+`Luster.loader` (Kotlin, Dart, and the web, for a `URL`, with `fetch`). Documents over 20 MB are refused. The default loaders
 are `URLSession.shared`, which `URLCache` caches as the server's headers allow;
 `HttpURLConnection`, which caches nothing unless the app installs an
 `HttpResponseCache`; and `dart:io`'s `HttpClient`, which caches nothing. On Android the
@@ -322,6 +343,14 @@ The widget draws with Flutter GPU, which the app has to enable, and on Android F
 GPU needs the Vulkan backend: try it on a device, because the standard emulator images
 run OpenGL ES. A released version brings the engine prebuilt, so the app needs no Rust.
 See [the package's README](flutter/luster/README.md) for the setup.
+
+### Web
+
+The engine runs in module workers and `<luster-view>` draws with three.js, which the
+page provides. Its settings are attributes: `src`, `metal`, `lighting`, `metal-lines`,
+`without-hidden-faces`, and `momentum` and `zoomable`, which are on unless set to
+`"false"`. See [the package's README](web/luster/README.md) for bundlers, CDNs and the
+rest.
 
 ## Examples
 

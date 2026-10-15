@@ -9,8 +9,8 @@ silhouette, the enamel cells, the raised gold line work, the rolled edge, the
 sandblasted reverse — then draws it with flutter_scene or writes it out as GLB.
 It ships no 3D model assets and no artwork: everything comes from the document.
 
-The engine is Rust, shared with Luster's Swift package and Kotlin library, so the
-same document gives the same badge, to the byte, on every platform.
+The engine is Rust, shared with Luster's Swift package, Kotlin library and npm
+package, so the same document gives the same badge, to the byte, on every platform.
 
 ## Setup
 

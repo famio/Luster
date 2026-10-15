@@ -1,3 +1,11 @@
+## 0.4.0
+
+* Pinch the badge up to five times closer, and slide two fingers, or a
+  trackpad's, to look about it; a double tap puts it back. `zoomEnabled: false`
+  leaves it at its size.
+* A rolled edge keeps its normals and tangents whole where an inset pinches
+  it, so some documents' GLB files differ from 0.3.0's.
+
 ## 0.3.0
 
 * On iOS and macOS the engine comes prebuilt through Swift Package Manager,

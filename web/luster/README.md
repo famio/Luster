@@ -4,10 +4,19 @@ The Luster engine compiled to WebAssembly: an SVG struck into a 3D enamel badge,
 worker, off the thread that draws, and `<luster-view>` to show one. The badges are the
 same bytes the engine makes on every other platform.
 
-Not published yet. Build the engine into `engine/` first:
-
 ```sh
-Scripts/build-wasm.sh
+npm install @famio/luster three   # three only for the view and stills
+```
+
+Without a bundler, from a CDN that serves the package's files as published:
+
+```html
+<script type="importmap">
+  { "imports": {
+      "@famio/luster": "https://cdn.jsdelivr.net/npm/@famio/luster/src/index.js",
+      "@famio/luster/view": "https://cdn.jsdelivr.net/npm/@famio/luster/src/view.js",
+      "three": "https://cdn.jsdelivr.net/npm/three@0.186/build/three.module.js" } }
+</script>
 ```
 
 ## Use
@@ -22,7 +31,8 @@ badge.textures;    // RGBA8 with their mip chains
 const glb = await badge.glb({ scale: 0.04 });
 ```
 
-A source is SVG text, its bytes, or an http(s) URL. `Luster.mint` takes
+A source is SVG text, its bytes, or a `URL` object, fetched over http(s) with
+`Luster.loader`. `Luster.mint` takes
 `withoutHiddenFaces`, `metalLines` and an `AbortSignal`, and fails with a `LusterError`
 whose `kind` says why. Two mints run at once across the page, the last eight badges are
 kept, and asking for a badge already being minted waits for that mint. `Luster.close()`
@@ -31,11 +41,12 @@ back while it lives.
 
 The engine is fetched from `engine/luster_wasm_bg.wasm` next to the package, resolved
 with `import.meta.url`; serve it as `application/wasm`, compressed, so it compiles as it
-arrives. Vite and webpack bundle the worker and the engine as they are. Loaded from a
-CDN that serves the package's files as published, as jsDelivr's `/npm/` and unpkg do,
-it starts its workers from a `blob:` script that imports them, which a Content Security
-Policy allows with `worker-src blob:`; a CDN that rebundles modules moves the engine
-from beside them.
+arrives. Vite and webpack bundle the worker and the engine as they are, served with the
+page. Loaded from a CDN that serves the package's files as published, as jsDelivr's
+`/npm/` and unpkg do, it starts its workers from a `blob:` script that imports them; a
+CDN that rebundles modules moves the engine from beside them. A Content Security Policy
+lets the engine compile with `script-src 'wasm-unsafe-eval'`, and the workers from a
+CDN start with `worker-src blob:`.
 
 Safari on iOS runs a page served over plain http from the local network without its
 JIT, and a mint takes some fifteen times as long: try one on a phone over https.
@@ -66,7 +77,7 @@ text or bytes in place of `src`.
 
 The children are a placeholder, shown in the middle until the badge is on screen. The
 element's `state` attribute is `minting`, `ready`, `failed` or `idle`, for styling it,
-and every change fires `statechange` with the state, the badge and the error.
+and each state it reports fires `statechange` with the state, the badge and the error.
 
 Every view on the page draws in one WebGL context and copies its frame onto its own
 canvas: a browser keeps only a few contexts a page, and a gallery of badges would lose
@@ -87,9 +98,3 @@ otherwise, as a PNG `Blob`. A list or a grid wants stills rather than a live vie
 row. It is transparent round the badge unless it is given a `background`, a `#rrggbb`
 colour or one in sRGB from 0 to 1. `LusterSnapshot.fromSource` mints the badge first,
 taking the mint's options too. It draws with three.js, as the view does.
-
-## Checks
-
-```sh
-npm test    # the mints' scheduling, on workers that are only promises
-```
