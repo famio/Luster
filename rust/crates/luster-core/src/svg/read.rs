@@ -57,7 +57,15 @@ pub fn read(data: &[u8], cancel: &CancelToken) -> Result<Document, Error> {
     }
     // No text: usvg is built without it (Cargo.toml), which keeps the font
     // machinery and its megabytes out of the engine.
-    let options = usvg::Options { ..usvg::Options::default() };
+    // An image comes only from a data URL: any other href would be read from
+    // the filesystem, and a document from anywhere could trace a local file.
+    let options = usvg::Options {
+        image_href_resolver: usvg::ImageHrefResolver {
+            resolve_data: usvg::ImageHrefResolver::default_data_resolver(),
+            resolve_string: Box::new(|_, _| None),
+        },
+        ..usvg::Options::default()
+    };
     let tree = usvg::Tree::from_data(data, &options).map_err(|e| Error::InvalidSvg(e.to_string()))?;
     cancel.check()?;
 
@@ -485,6 +493,56 @@ mod tests {
         let area = area(&document.elements[0]);
         let disc = std::f64::consts::PI * 625.0;
         assert!((area - disc).abs() < disc * 0.01, "{area} vs {disc}");
+    }
+
+    /// A white square on black, half the image's width.
+    fn square_png() -> Vec<u8> {
+        let size = 16u32;
+        let pixels: Vec<u8> = (0..size * size)
+            .map(|i| if (4..12).contains(&(i % size)) && (4..12).contains(&(i / size)) { 255 } else { 0 })
+            .collect();
+        let mut out = Vec::new();
+        let mut encoder = png::Encoder::new(&mut out, size, size);
+        encoder.set_color(png::ColorType::Grayscale);
+        encoder.write_header().unwrap().write_image_data(&pixels).unwrap();
+        out
+    }
+
+    fn base64(bytes: &[u8]) -> String {
+        const DIGITS: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        let mut out = String::new();
+        for chunk in bytes.chunks(3) {
+            let n = chunk.iter().enumerate().fold(0u32, |n, (i, &b)| n | u32::from(b) << (16 - 8 * i));
+            for i in 0..4 {
+                out.push(if i <= chunk.len() { DIGITS[(n >> (18 - 6 * i) & 63) as usize] as char } else { '=' });
+            }
+        }
+        out
+    }
+
+    fn image_masked(href: &str) -> Document {
+        read_str(&format!(
+            r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                <mask id="m"><image href="{href}" width="100" height="100"/></mask>
+                <rect width="100" height="100" fill="#c00" mask="url(#m)"/>
+            </svg>"##
+        ))
+    }
+
+    #[test]
+    fn an_image_in_a_mask_from_a_data_url_is_traced() {
+        let document = image_masked(&format!("data:image/png;base64,{}", base64(&square_png())));
+        let area = area(&document.elements[0]);
+        assert!((area - 2500.0).abs() < 2500.0 * 0.05, "{area}");
+    }
+
+    #[test]
+    fn an_image_from_a_file_is_never_read() {
+        let file = std::env::temp_dir().join(format!("luster-href-{}.png", std::process::id()));
+        std::fs::write(&file, square_png()).unwrap();
+        let document = image_masked(file.to_str().unwrap());
+        std::fs::remove_file(&file).unwrap();
+        assert!(document.elements.is_empty(), "{:?}", document.elements);
     }
 
     #[test]
