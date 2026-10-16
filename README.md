@@ -32,7 +32,7 @@ platform.
 **Swift Package Manager**
 
 ```swift
-.package(url: "https://github.com/famio/Luster.git", from: "0.3.0")
+.package(url: "https://github.com/famio/Luster.git", from: "0.4.0")
 ```
 
 Two products: `Luster` (mint a badge, take a still) and `LusterUI` (views).
@@ -40,15 +40,15 @@ Two products: `Luster` (mint a badge, take a still) and `LusterUI` (views).
 **Android** — on Maven Central:
 
 ```kotlin
-implementation("dev.famio:luster:0.3.0")          // the View system
-implementation("dev.famio:luster-compose:0.3.0")  // Compose; brings luster with it
+implementation("dev.famio:luster:0.4.0")          // the View system
+implementation("dev.famio:luster-compose:0.4.0")  // Compose; brings luster with it
 ```
 
 **Flutter** — on [pub.dev](https://pub.dev/packages/luster):
 
 ```yaml
 dependencies:
-  luster: ^0.3.0
+  luster: ^0.4.0
 ```
 
 **Web** — on npm:

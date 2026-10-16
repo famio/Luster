@@ -13,8 +13,8 @@ Without a bundler, from a CDN that serves the package's files as published:
 ```html
 <script type="importmap">
   { "imports": {
-      "@famio/luster": "https://cdn.jsdelivr.net/npm/@famio/luster/src/index.js",
-      "@famio/luster/view": "https://cdn.jsdelivr.net/npm/@famio/luster/src/view.js",
+      "@famio/luster": "https://cdn.jsdelivr.net/npm/@famio/luster@0.4.0/src/index.js",
+      "@famio/luster/view": "https://cdn.jsdelivr.net/npm/@famio/luster@0.4.0/src/view.js",
       "three": "https://cdn.jsdelivr.net/npm/three@0.186/build/three.module.js" } }
 </script>
 ```
