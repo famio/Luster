@@ -42,6 +42,16 @@ $('metal-lines').onchange = (e) => (view.metalLines = e.target.checked);
 // Opening
 
 const pick = $('pick');
+// An image type in accept has a phone offer its photos and camera first, and
+// neither holds an SVG. iOS also files an SVG as XML; Android shows one only
+// when any file will do, and `open` turns away the rest. iPadOS reads as a Mac
+// but for its touch points.
+const agent = navigator.userAgent;
+if (/iPhone|iPad|iPod/.test(agent) || (/Macintosh/.test(agent) && navigator.maxTouchPoints > 1)) {
+  pick.accept = 'application/xml,text/xml';
+} else if (/Android/.test(agent)) {
+  pick.accept = 'application/octet-stream';
+}
 $('open').onclick = () => pick.click();
 pick.onchange = () => {
   if (pick.files[0]) open(pick.files[0]);
