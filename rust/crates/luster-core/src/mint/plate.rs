@@ -5,7 +5,7 @@
 //! of each other should be joined by the metal between them, which is a
 //! question about distance rather than about paths.
 
-use rayon::prelude::*;
+use crate::par::{self, prelude::*};
 
 use crate::geom::islands;
 use crate::geom::path::{self, Contours};
@@ -58,7 +58,7 @@ pub fn plate(
     // Lines are read slightly wider than drawn: a fill can poke past its
     // outlining stroke at a sharp corner, and would earn the full margin
     // there, which stands out as a gold spike.
-    let (art, on_line) = rayon::join(
+    let (art, on_line) = par::join(
         || sheet.lay(&path::from_contours(edge), 0.0),
         || {
             (!lines.is_empty()).then(|| {
@@ -72,7 +72,7 @@ pub fn plate(
         None => (field::Edge::of(&art, None, width, height), None),
         Some(on_line) => {
             let off_line: Vec<bool> = on_line.par_iter().map(|&v| !v).collect();
-            let (fill, line) = rayon::join(
+            let (fill, line) = par::join(
                 || field::Edge::of(&art, Some(&off_line), width, height),
                 || field::Edge::of(&art, Some(on_line), width, height),
             );
@@ -104,7 +104,7 @@ pub fn plate(
                 // behind the edge does not change the margin. Each offset is cut
                 // at its own margin, give or take the blend.
                 let (fill_cut, line_cut) = ([reach - blend..reach + blend], [hairs - blend..hairs + blend]);
-                let (to_fill, to_line) = rayon::join(
+                let (to_fill, to_line) = par::join(
                     || fill.distance(&art, width, height, &fill_cut),
                     || line.distance(&art, width, height, &line_cut),
                 );
@@ -140,7 +140,7 @@ pub fn plate(
         // pieces, a notch, a counter. The full plate is shrunk back by what the
         // fills gave up, and reaches no further than the fills do elsewhere.
         let inset = ((margin - fill_margin) * sheet.scale) as f32;
-        let (out, mut bare) = rayon::join(
+        let (out, mut bare) = par::join(
             || field::distance_to_edge(&cover, None, width, height, &[-inset - 0.5..-inset + 0.5]),
             || grow(fill_margin),
         );

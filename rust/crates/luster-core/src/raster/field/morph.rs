@@ -1,6 +1,6 @@
 //! Joining and rounding a plate: bridges, fillets and stopped-up slots.
 
-use rayon::prelude::*;
+use crate::par::prelude::*;
 
 use super::distance::spread_within;
 use super::label::Pieces;

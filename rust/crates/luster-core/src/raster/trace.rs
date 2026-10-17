@@ -6,7 +6,7 @@
 //! because a thinned loop cannot tell a corner from a small round end.
 
 use kurbo::{BezPath, Point, Rect};
-use rayon::prelude::*;
+use crate::par::prelude::*;
 use crate::math;
 
 /// Distance either side of a point over which its turn is measured, in pixels.

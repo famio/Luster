@@ -7,6 +7,7 @@ use kurbo::{Affine, BezPath, Rect};
 use crate::model::Rgba;
 use crate::geom::boolean::{self, Rule};
 use crate::geom::path::{self, Contours};
+use crate::par;
 use crate::svg::cells::{self, Cell};
 use crate::svg::composite;
 use crate::svg::read::{self, Element};
@@ -52,7 +53,7 @@ pub fn artwork(data: &[u8], cancel: &CancelToken) -> Result<Artwork, Error> {
     };
     // The silhouette needs nothing of the cells, so it is joined up while
     // they are cut.
-    let (reading, (silhouette, detail)) = rayon::join(
+    let (reading, (silhouette, detail)) = par::join(
         || {
             let read = cells::cells(&document.elements, frame);
             cancel.check()?;

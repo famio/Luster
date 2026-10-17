@@ -1,6 +1,6 @@
 //! A minted badge: submeshes in the shared vertex layout, and their materials.
 
-use rayon::prelude::*;
+use crate::par::prelude::*;
 
 use crate::mesh::{MeshBuilder, dome, extrude_rolled};
 use crate::mint::{self as striking};

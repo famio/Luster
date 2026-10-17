@@ -7,7 +7,7 @@
 //! shows.
 
 use kurbo::{Affine, Rect};
-use rayon::prelude::*;
+use crate::par::prelude::*;
 use tiny_skia::{Mask, Pixmap};
 
 use crate::model::Rgba;

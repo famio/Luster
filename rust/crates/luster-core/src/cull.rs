@@ -13,7 +13,7 @@ use crate::geom::path::{self, Contours};
 use crate::mesh::{MeshBuilder, VERTEX_STRIDE};
 use crate::mint::Piece;
 use crate::raster::Sheet;
-use rayon::prelude::*;
+use crate::par::{self, prelude::*};
 use crate::{CancelToken, Error};
 
 /// Raster pixels per badge unit.
@@ -226,10 +226,10 @@ impl Footprint {
     fn new(piece: &Piece, frame: &Frame) -> Footprint {
         let drop = piece.slab.roll;
         // A rolled piece is at full height only inside its roll.
-        let ((body, reach), crown) = rayon::join(
+        let ((body, reach), crown) = par::join(
             || {
                 let body = frame.cover(&piece.rings);
-                rayon::join(|| body.shrunk(), || body.grown())
+                par::join(|| body.shrunk(), || body.grown())
             },
             || (drop > 0.0).then(|| frame.cover(&crate::geom::offset::inset(&piece.rings, f64::from(drop))).shrunk()),
         );

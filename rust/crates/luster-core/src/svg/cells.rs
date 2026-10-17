@@ -17,6 +17,7 @@ use crate::geom::islands;
 use crate::geom::path::Contours;
 use crate::svg::read::{Cap, Element};
 use crate::math;
+use crate::par;
 
 /// Alpha at or above this is a solid paint; anything below is a glaze.
 const OPAQUE: f32 = 0.99;
@@ -170,7 +171,7 @@ fn shown(elements: &[Element]) -> Vec<Contours> {
     let solid: Vec<&Element> =
         elements.iter().rev().filter(|element| element.color.is_some_and(|color| color.a >= OPAQUE)).collect();
     let mut shown: Vec<Contours> = vec![Vec::new(); solid.len()];
-    rayon::scope(|scope| {
+    par::scope(|scope| {
         let mut covered: Arc<Contours> = Arc::new(Vec::new());
         for (index, (element, shows)) in solid.iter().zip(shown.iter_mut()).enumerate() {
             let above = Arc::clone(&covered);

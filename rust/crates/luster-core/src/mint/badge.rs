@@ -1,7 +1,7 @@
 //! Striking a badge from read artwork.
 
 use kurbo::{Affine, Rect};
-use rayon::prelude::*;
+use crate::par::{self, prelude::*};
 
 use crate::model::{ENAMEL_COLOR, GOLD, Material, MaterialRole, MintOptions, Rgba};
 use crate::design::Artwork;
@@ -459,7 +459,7 @@ fn glaze_parts(opened: &Contours, placed: &[(crate::svg::cells::Cell, Contours)]
     };
     let bounds: Vec<Option<Rect>> = placed.iter().map(|(_, rings)| crate::geom::path::bounds(rings)).collect();
     // The seams are closed alongside the cutting: neither waits on the other.
-    let (mut parts, seams) = rayon::join(
+    let (mut parts, seams) = par::join(
         || -> Vec<Contours> {
             placed
                 .par_iter()

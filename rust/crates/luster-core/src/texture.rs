@@ -3,7 +3,7 @@
 
 use std::sync::OnceLock;
 
-use rayon::prelude::*;
+use crate::par::prelude::*;
 
 use crate::math;
 

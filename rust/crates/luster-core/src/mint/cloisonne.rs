@@ -5,7 +5,7 @@
 //! the face all agree to the pixel.
 
 use kurbo::BezPath;
-use rayon::prelude::*;
+use crate::par::{self, prelude::*};
 
 use crate::geom::boolean::{self, Rule};
 use crate::geom::path::{self, Contours};
@@ -133,9 +133,9 @@ pub fn cloisonne(
     // openings the traced metal is cut back to, which are booleans on the
     // cells alone: each is drawn on one thread while the plate is grown on
     // the rest. The coverages are held as bytes until they are read.
-    let ((cover, enamel), ((colour, walls), (near, within))) = rayon::join(
+    let ((cover, enamel), ((colour, walls), (near, within))) = par::join(
         || {
-            rayon::join(
+            par::join(
                 || {
                     let rim = (CLOISONNE_RIM, LINE_BODY);
                     plate(&sheet, edge, lines, margin, FILL_EASE, speck, rim, f64::from(WALL_ROLL))
@@ -143,7 +143,7 @@ pub fn cloisonne(
                 || openings(edge, cells),
             )
         },
-        || rayon::join(|| rayon::join(colour, walls), || rayon::join(near, within)),
+        || par::join(|| par::join(colour, walls), || par::join(near, within)),
     );
     cancel.check()?;
 
@@ -155,7 +155,7 @@ pub fn cloisonne(
             -pixels - 0.5..-pixels + 0.5
         })
         .collect();
-    let (outline, out) = rayon::join(
+    let (outline, out) = par::join(
         || sheet.outline(&cover, METAL_TOLERANCE),
         || field::distance_to_edge(&cover, None, sheet.width, sheet.height, &cuts),
     );
@@ -168,9 +168,9 @@ pub fn cloisonne(
     // Flat metal stops short of the roll and runs on under the wall's inner
     // edge, which is rolled too and would otherwise show as a groove.
     let clear = || inside(f64::from(WALL_ROLL) + WALL_CLEAR);
-    let ((plate_path, hollow), clear) = rayon::join(
+    let ((plate_path, hollow), clear) = par::join(
         || {
-            rayon::join(
+            par::join(
                 || sheet.outline(&inside(WALL_INSET), METAL_TOLERANCE),
                 || sheet.outline(&inside(wall_width), METAL_TOLERANCE),
             )
@@ -194,7 +194,7 @@ pub fn cloisonne(
         })
         .collect();
     cancel.check()?;
-    let (metal, wall_top) = rayon::join(
+    let (metal, wall_top) = par::join(
         || {
             sheet.outline_straight(&metal, FACE_TOLERANCE).map(|traced| {
                 let traced = boolean::simplify(&path::contours(&traced, path::TOLERANCE), Rule::EvenOdd);

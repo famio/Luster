@@ -20,6 +20,7 @@ pub(crate) mod math;
 pub(crate) mod mesh;
 pub(crate) mod mint;
 pub(crate) mod paint;
+pub(crate) mod par;
 pub(crate) mod raster;
 pub(crate) mod svg;
 pub(crate) mod work;

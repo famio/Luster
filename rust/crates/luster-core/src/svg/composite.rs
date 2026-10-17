@@ -10,6 +10,7 @@ use tiny_skia::{FillRule, GradientStop, Paint as SkiaPaint, Pixmap, Shader, Spre
 
 use crate::model::Rgba;
 use crate::geom::path::{self, Contours};
+use crate::par;
 use crate::raster::trace;
 use crate::svg::cells::Cell;
 use crate::svg::paint::{Gradient, Paint, Spread};
@@ -34,7 +35,7 @@ pub struct Reading {
 /// between the steps of each.
 pub fn sampling(cells: Vec<Cell>, elements: &[Element], frame: Rect, cancel: &CancelToken) -> Result<Reading, Error> {
     // The outline is traced from a painting of its own, alongside this one.
-    let (outline, cells) = rayon::join(
+    let (outline, cells) = par::join(
         || if cancel.is_cancelled() { None } else { outline(elements, frame) },
         || colours(cells, elements, frame, cancel),
     );

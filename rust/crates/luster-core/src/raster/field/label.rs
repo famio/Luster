@@ -1,6 +1,6 @@
 //! The connected pieces of a mask.
 
-use rayon::prelude::*;
+use crate::par::prelude::*;
 
 /// The connected pieces of a mask, largest first, each as the indices of its
 /// pixels in scan order. Specks under `minimum` pixels are left out; pieces of

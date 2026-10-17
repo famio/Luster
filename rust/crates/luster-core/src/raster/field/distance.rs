@@ -1,6 +1,6 @@
 //! Distances to a mask's edge, exact and to a pixel's fraction.
 
-use rayon::prelude::*;
+use crate::par::prelude::*;
 use crate::math;
 
 /// Exact Euclidean distance, in pixels, from every pixel to the nearest marked
