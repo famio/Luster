@@ -32,6 +32,7 @@ import com.google.android.filament.Texture
 import com.google.android.filament.TransformManager
 import com.google.android.filament.Viewport
 import com.google.android.filament.android.DisplayHelper
+import com.google.android.filament.gltfio.Gltfio
 import com.google.android.filament.gltfio.UbershaderProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -65,7 +66,7 @@ class LusterStage(private val context: Context) {
     companion object {
         init {
             // Filament's native side, loaded once per process.
-            com.google.android.filament.utils.Utils.init()
+            Gltfio.init()
         }
 
         // Drag sensitivity (radians per point), the tilt limit, and where the

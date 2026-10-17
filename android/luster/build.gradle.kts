@@ -90,7 +90,6 @@ dependencies {
     // Drawing: Filament, and gltfio for the ubershaders a badge is shaded with.
     api("com.google.android.filament:filament-android:1.70.0")
     api("com.google.android.filament:gltfio-android:1.70.0")
-    api("com.google.android.filament:filament-utils-android:1.70.0")
 
     testImplementation("junit:junit:4.13.2")
 }

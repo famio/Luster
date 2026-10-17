@@ -337,6 +337,19 @@ The View's placeholder is laid out by you, over the view, as a list's empty view
 view only shows it and takes it away. The composable lays its `placeholder` in the
 middle, as the Apple views do.
 
+The engine is built for `arm64-v8a`, and `x86_64` for the emulator. Filament and JNA
+bring libraries for 32-bit ABIs too, which an app with Luster cannot use: name the two in
+the app's `abiFilters`, so that an APK leaves the rest out and Google Play does not
+offer the app to a device with no engine to run.
+
+```kotlin
+android {
+    defaultConfig {
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
+    }
+}
+```
+
 ### Flutter
 
 The widget draws with Flutter GPU, which the app has to enable, and on Android Flutter
