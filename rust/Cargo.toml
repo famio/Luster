@@ -19,6 +19,10 @@ repository = "https://github.com/famio/Luster"
 luster-core = { path = "crates/luster-core" }
 uniffi = "0.32.1"
 
+[profile.dev]
+# Backtraces keep file and line; full debug info makes target/debug about 30% larger.
+debug = "line-tables-only"
+
 [profile.release]
 lto = "fat"
 codegen-units = 1
